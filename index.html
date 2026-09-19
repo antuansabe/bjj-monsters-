@@ -1127,7 +1127,7 @@ function openCircuit(){show('s-circuit');$('#s-circuit h2').textContent='CIRCUIT
     b.innerHTML=`<canvas width="24" height="24"></canvas><span><b>${esc(t.name)}</b><small>${esc(t.desc)}</small><small class="mute">${t.fights.length} combates · Medalla + luchadores</small></span><span class="medal">${done?'MEDALLA':open_?'ABIERTO':'CERRADO'}</span>`;
     box.appendChild(b);drawFace(b.querySelector('canvas').getContext('2d'),ROSTER[t.fights[t.fights.length-1]].pal,done?'#4a5a3a':'#9a2a20');
     b.onclick=()=>{circuit={si:i,idx:0};sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,circuit:1};renderSelect()}})}
-function openAtlas(){show('s-circuit');$('#s-circuit h2').textContent='MAPA Y DESTINOS';$('#s-circuit p').textContent='Elige una sede para viajar. Las medallas abren nuevos torneos.';const box=$('#circuitList');box.innerHTML='';
+function openAtlas(){show('s-circuit');$('#s-circuit h2').textContent='MAPA Y DESTINOS';$('#s-circuit p').textContent='Elige una sede para viajar. Las medallas abren nuevos torneos.';const box=$('#circuitList');box.innerHTML='';const overview=document.createElement('canvas');overview.width=160;overview.height=196;overview.setAttribute('aria-label','Plano del circuito: CJI al norte, ADCC debajo, Worlds al centro y dojos al sur');overview.style.cssText='width:100%;max-height:320px;object-fit:contain;background:#182b31;border:2px solid #65865b';box.appendChild(overview);drawOverview(overview.getContext('2d'));
   VENUES.forEach(v=>{const open_=v.stage===null||canEnter(v.stage),b=document.createElement('button');b.className='btn '+(v.id==='shop'?'gold':'dark');b.disabled=!open_;
     const missing=v.stage===null?[]:missingMedals(v.stage).map(id=>CIRCUIT.find(t=>t.id===id));
     b.innerHTML='<b>'+esc(v.name)+'</b><br><small>'+(open_?(v.id==='shop'?'SURESTE · KIMONOS, LOOKS Y MEJORAS':v.rivals?'RIVALES PROPIOS · ENTRENAR': 'TORNEO DESBLOQUEADO'):'FALTA: '+missing.map(t=>t.name).join(', '))+'</small>';
@@ -1135,36 +1135,38 @@ function openAtlas(){show('s-circuit');$('#s-circuit h2').textContent='MAPA Y DE
 $('#cBack').onclick=()=>{circuit=null;openHub()};
 
 /* ==================== MAPA: mundo caminable ==================== */
-const TS=16,MW=36,MH=38;
+const TS=16,MW=42,MH=62;
 const VENUES=[
- {id:'carnales',name:'DOS CARNALES DOJO',x:25,y:7,w:8,h:4,roof:'#a46f37',wall:'#d4bc90',trim:'#4d3533',sign:'DOS CARNALES',stage:3,rivals:['chanops','vagabundo']},
- {id:'shop',name:'PURAS BRONCAS STORE',x:25,y:27,w:7,h:4,roof:'#267366',wall:'#f0d5a3',trim:'#edb35c',sign:'PURAS BRONCAS STORE',stage:null},
- {id:'flow',name:'DOJO FLOW',x:25,y:17,w:6,h:4,roof:'#465a8c',wall:'#d9dfcf',trim:'#6da9ae',sign:'FLOW',stage:1,rivals:['chelo','mika','luana']},
- {id:'nogi',name:'DOJO UMBRAL',x:3,y:28,w:7,h:4,roof:'#734c69',wall:'#d5b7a3',trim:'#dfa975',sign:'UMBRAL',stage:2,rivals:['kolya','bazza','tito']},
- {id:'cji',name:'CJI INVITATIONAL',x:8,y:1,w:8,h:4,roof:'#57277f',wall:'#2a1442',trim:'#ff4fd8',sign:'CJI',stage:6},
- {id:'ibjjf',name:'IBJJF WORLDS',x:2,y:8,w:7,h:4,roof:'#123a86',wall:'#dfe6f4',trim:'#123a86',sign:'IBJJF',stage:4},
- {id:'adcc',name:'ADCC TRIALS',x:15,y:8,w:7,h:4,roof:'#14151f',wall:'#3a3320',trim:'#f6c744',sign:'ADCC',stage:5},
- {id:'dojo',name:'ACADEMIA HORIZONTE',x:14,y:16,w:6,h:4,roof:'#c8402f',wall:'#efe4c4',trim:'#9a6232',sign:'DOJO',stage:0,rivals:['aurik','bia','tonelada']},
- {id:'garage',name:'GARAJE · OPEN MAT',x:3,y:17,w:5,h:3,roof:'#6a7080',wall:'#a8583c',trim:'#5a2e1e',sign:'OPEN',stage:null,rivals:['spaz','niko','roman']}];
+ {id:'carnales',name:'DOS CARNALES DOJO',x:25,y:35,w:11,h:5,roof:'#a46f37',wall:'#d4bc90',trim:'#4d3533',sign:'DOS CARNALES',stage:3,rivals:['chanops','vagabundo']},
+ {id:'shop',name:'PURAS BRONCAS STORE',x:28,y:54,w:10,h:4,roof:'#267366',wall:'#f0d5a3',trim:'#edb35c',sign:'PURAS BRONCAS STORE',stage:null},
+ {id:'flow',name:'DOJO FLOW',x:5,y:35,w:9,h:4,roof:'#465a8c',wall:'#d9dfcf',trim:'#6da9ae',sign:'FLOW',stage:1,rivals:['chelo','mika','luana']},
+ {id:'nogi',name:'DOJO UMBRAL',x:5,y:45,w:9,h:4,roof:'#734c69',wall:'#d5b7a3',trim:'#dfa975',sign:'UMBRAL',stage:2,rivals:['kolya','bazza','tito']},
+ {id:'cji',name:'CJI INVITATIONAL',x:15,y:2,w:11,h:5,roof:'#57277f',wall:'#2a1442',trim:'#ff4fd8',sign:'CJI',stage:6},
+ {id:'ibjjf',name:'IBJJF WORLDS',x:5,y:23,w:10,h:5,roof:'#123a86',wall:'#dfe6f4',trim:'#123a86',sign:'IBJJF',stage:4},
+ {id:'adcc',name:'ADCC TRIALS',x:25,y:12,w:10,h:5,roof:'#14151f',wall:'#3a3320',trim:'#f6c744',sign:'ADCC',stage:5},
+ {id:'dojo',name:'ACADEMIA HORIZONTE',x:25,y:45,w:11,h:4,roof:'#c8402f',wall:'#efe4c4',trim:'#9a6232',sign:'DOJO',stage:0,rivals:['aurik','bia','tonelada']},
+ {id:'garage',name:'GARAJE · OPEN MAT',x:4,y:54,w:9,h:4,roof:'#6a7080',wall:'#a8583c',trim:'#5a2e1e',sign:'OPEN',stage:null,rivals:['spaz','niko','roman']}];
 VENUES.forEach(v=>{v.dx=v.x+(v.w>>1);v.dy=v.y+v.h-1});
 const NPCS=[
- {x:11,y:15,pal:'roman',lines:['Posición antes que sumisión. Y córtate las uñas, por favor.','Si juntas los LP para tu siguiente cinta, ven a la academia a presentar el examen.']},
- {x:7,y:21,pal:'spaz',lines:['¿Un roll suave? Te juro que ahora sí voy suave.','…La vez pasada fue sin querer.']},
- {x:17,y:13,pal:'kolya',lines:['Dicen que El Rey Rayan desayuna cinturones negros.','Yo digo que desayuna açaí. Mucho açaí.']},
- {x:6,y:13,pal:'luana',lines:['Aquí se gana por ventajas. Literal: gané una final 0 a 0 por una ventaja.','Si tu sumisión casi entra, el árbitro te da ventaja. Cuenta en el empate.']},
- {x:13,y:6,pal:'bazza',lines:['El CJI es solo para invitados, mate.','Gana todas las demás medallas: dojos, Worlds y Trials. Entonces te invitan al CJI.']}];
+ {x:18,y:51,pal:'roman',lines:['Bienvenido al distrito de los dojos. Horizonte está al este y Umbral al oeste.','Gana las cuatro medallas de dojo. Después sube al Worlds, al ADCC y por último al CJI.']},
+ {x:22,y:55,pal:'chanops',lines:['¡Yo te guío! Bueno… creo que el norte es para arriba.','Puras Broncas Store queda al sureste. El garaje está al suroeste.']},
+ {x:22,y:40,pal:'vagabundo',lines:['Dos Carnales está al este. Johnny C te espera después de mí.','Cuando le ganes podrás cobrar 40 créditos o retar a Black Johnny por la medalla.']},
+ {x:18,y:29,pal:'luana',lines:['El Worlds requiere cuatro medallas: Horizonte, Flow, Umbral y Dos Carnales.','Camina hacia el norte: después viene ADCC.']},
+ {x:22,y:18,pal:'kolya',lines:['ADCC es el penúltimo escalón.','La última sede está todavía más al norte.']},
+ {x:18,y:8,pal:'bazza',lines:['CJI: la cumbre. Aquí necesitas todas las otras seis medallas.','Un cinturón no abre esa puerta. Tu recorrido sí.']}];
 let MAPT=null;
 function buildMap(){const rnd=(a=>()=>(a=(a*16807)%2147483647)/2147483647)(42),g=[];
   for(let y=0;y<MH;y++){g.push([]);for(let x=0;x<MW;x++)g[y].push(x===0||y===0||x===MW-1||y===MH-1?'T':'.')}
   const path=(x0,y0,x1,y1)=>{for(let y=Math.min(y0,y1);y<=Math.max(y0,y1);y++)for(let x=Math.min(x0,x1);x<=Math.max(x0,x1);x++)g[y][x]='='};
-  path(12,5,12,23);path(11,21,13,23);path(5,12,18,12);path(5,20,17,20);path(12,23,12,34);path(6,32,28,32);path(28,21,28,32);path(17,21,28,21);
-  for(const v of VENUES){path(v.dx,v.dy+1,v.dx,v.dy+1);for(let y=v.y;y<v.y+v.h;y++)for(let x=v.x;x<v.x+v.w;x++)g[y][x]='B';g[v.dy][v.dx]='D'}
-  for(let y=21;y<=23;y++)for(let x=18;x<=21;x++)g[y][x]='~';
+  path(20,7,21,59);
+  for(const v of VENUES){path(Math.min(20,v.dx),v.dy+1,Math.max(21,v.dx),v.dy+1);for(let y=v.y;y<v.y+v.h;y++)for(let x=v.x;x<v.x+v.w;x++)g[y][x]='B';g[v.dy][v.dx]='D'}
+  for(let y=18;y<=21;y++)for(let x=29;x<=36;x++)g[y][x]='~';
+  for(const n of NPCS)for(const[dx,dy]of[[0,0],[1,0],[-1,0],[0,1],[0,-1]])if(g[n.y+dy][n.x+dx]==='.')g[n.y+dy][n.x+dx]='=';
   for(let y=1;y<MH-1;y++)for(let x=1;x<MW-1;x++)if(g[y][x]==='.'){const nearPath=[[0,1],[0,-1],[1,0],[-1,0]].some(([a,b])=>'=D'.includes(g[y+b][x+a]));
     const r=rnd();if(!nearPath&&r<.17)g[y][x]='T';else if(r>.88)g[y][x]=','}
   return g}
 const solid=(x,y)=>x<0||y<0||x>=MW||y>=MH||'TB~'.includes(MAPT[y][x])||NPCS.some(n=>n.x===x&&n.y===y);
-const me={x:12,y:22,px:12*TS,py:22*TS,dir:'down',moving:false,step:0};let held=null,mapBusy=false;
+const me={x:20,y:54,px:20*TS,py:54*TS,dir:'down',moving:false,step:0};let held=null,mapBusy=false;
 const DIRS={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
 function mapPal(){return myFighter?customFighter(myFighter,beltHex(account.profile.belt||'blanco')).pal:ROSTER.aurik.pal}
 function drawWalker(c,px,py,dir,p,step){const o=[],r=(x,y,w,h,col)=>o.push([px+x,py+y,w,h,col]),leg=step%8<4?1:0,lg=p.legs||p.skin;
@@ -1174,6 +1176,11 @@ function drawWalker(c,px,py,dir,p,step){const o=[],r=(x,y,w,h,col)=>o.push([px+x
   if(p.band)r(4,2,8,1,p.band);
   if(dir==='down'){r(6,4,1,1,INK);r(9,4,1,1,INK);if(p.beard)r(5,6,6,1,p.beard)}if(dir==='left'){r(5,4,1,1,INK);if(p.beard)r(4,6,4,1,p.beard)}if(dir==='right'){r(10,4,1,1,INK);if(p.beard)r(8,6,4,1,p.beard)}
   c.fillStyle='#3d5949';c.fillRect(px+2,py+14,12,2);c.fillStyle=INK;for(const[x,y,w,h]of o)c.fillRect(x-1,y-1,w+2,h+2);for(const[x,y,w,h,col]of o){c.fillStyle=col;c.fillRect(x,y,w,h)}c.fillStyle=shade(p.top,1.22);c.fillRect(px+4,py+7,2,3);c.fillStyle=shade(p.top,.7);c.fillRect(px+11,py+7,2,3);c.fillStyle=shade(p.skin,1.15);if(dir!=='up')c.fillRect(px+5,py+2,2,1)}
+function drawOverview(c){if(!MAPT)MAPT=buildMap();const z=3,ox=17,oy=5;c.imageSmoothingEnabled=false;c.fillStyle='#182b31';c.fillRect(0,0,160,196);
+  const colors={T:'#294d43','~':'#467f91','=':'#d8c39e',D:'#e5bc5c',B:'#758080','.':'#65865b',',':'#719362'};
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){c.fillStyle=colors[MAPT[y][x]];c.fillRect(ox+x*z,oy+y*z,z,z)}
+  for(const v of VENUES){c.fillStyle=v.stage===null?'#69c9b4':canEnter(v.stage)?'#e5bc5c':'#7c618f';c.fillRect(ox+v.x*z,oy+v.y*z,v.w*z,v.h*z);if(v.stage!==null)ptext(c,String(v.stage+1),ox+v.dx*z-1,oy+v.y*z+4,'#182b31')}
+  c.fillStyle='#fff';c.fillRect(ox+me.x*z-1,oy+me.y*z-1,5,5);ptext(c,'N',4,5,'#e5bc5c')}
 function drawMap(c,fr){const VW=160,VH=c.canvas.height;c.imageSmoothingEnabled=false;
   const cx=clamp(Math.round(me.px+8-VW/2),0,MW*TS-VW),cy=clamp(Math.round(me.py+8-VH/2),0,Math.max(0,MH*TS-VH));c.save();c.translate(-cx,-cy);
   const x0=cx>>4,y0=cy>>4,x1=Math.min(MW-1,(cx+VW)>>4),y1=Math.min(MH-1,(cy+VH)>>4);
@@ -1203,7 +1210,7 @@ function interact(){if(mapBusy||me.moving)return;const[dx,dy]=DIRS[me.dir],n=NPC
   else{const v=VENUES.find(v=>v.dx===me.x+dx&&v.dy===me.y+dy);if(v){me.x+=dx;me.y+=dy;me.moving=true}}}
 function openMap(fresh){circuit=null;if(!MAPT)MAPT=buildMap();show('s-map');Snd.theme('title');held=null;mapBusy=false;fitCanvas($('#mapCv'));
   const p=account.profile,pr=progress();$('#mhBelt').textContent='CINTA '+UP(p.belt||'blanco');$('#mhLp').textContent=(p.lp||0)+' LP';$('#mhMed').textContent=pr.medals.length+'/'+CIRCUIT.length+' MEDALLAS';
-  if(fresh&&!store.get('bjjm_maptip',false)){store.set('bjjm_maptip',true);mapSay(['Este es el circuito. Camina con la cruceta y entra por la puerta de cada sede.','Con A hablas y avanzas el diálogo. Empieza por la ACADEMIA, a la derecha. En MENÚ > MAPA Y DESTINOS puedes viajar a Puras Broncas Store y a los otros dojos.'])}}
+  if(fresh&&!store.get('bjjm_maptip',false)){store.set('bjjm_maptip',true);mapSay(['Este es el circuito. Empiezas al sur. Sube por la avenida: dojos, Worlds, ADCC y CJI.','Con A hablas y avanzas el diálogo. Empieza por Academia Horizonte, al noreste. En MENÚ > MAPA Y DESTINOS puedes viajar a Puras Broncas Store y a los otros dojos.'])}}
 document.querySelectorAll('.dpad button').forEach(b=>{const d=b.dataset.d,on=e=>{e.preventDefault();Snd.wake();held=d;b.classList.add('held')},off=()=>{if(held===d)held=null;b.classList.remove('held')};
   b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off))});
 addEventListener('blur',()=>{held=null});

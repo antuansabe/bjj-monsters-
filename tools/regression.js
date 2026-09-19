@@ -28,8 +28,9 @@ profile.progress.johnnyDefeated=true;assert.ok(prog.unlockedFighters().includes(
 profile.progress.medals.push('carnales');assert.ok(prog.unlockedFighters().includes('black_johnny'));
 const map=new Function(between('const TS=16','const me=')+';return{buildMap,VENUES,NPCS,MW,MH};')();
 for(const v of map.VENUES.filter(v=>v.stage!==null)){assert.ok(prog.CIRCUIT[v.stage].fights.length);assert.equal(prog.CIRCUIT[v.stage].id,v.id==='dojo'?'copa':v.id==='nogi'?'umbral':v.id)}
-const grid=map.buildMap(),seen=new Set(['12,22']),queue=[[12,22]];
+const grid=map.buildMap(),seen=new Set(['20,54']),queue=[[20,54]];
 for(const[x,y]of queue)for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy,key=X+','+Y;if(X<0||Y<0||X>=map.MW||Y>=map.MH||seen.has(key)||'TB~'.includes(grid[Y][X])||map.NPCS.some(n=>n.x===X&&n.y===Y))continue;seen.add(key);queue.push([X,Y])}
+const byId=id=>map.VENUES.find(v=>v.id===id);assert.ok(byId('cji').y<byId('adcc').y&&byId('adcc').y<byId('ibjjf').y);for(const id of ['dojo','flow','nogi','carnales'])assert.ok(byId(id).y>byId('ibjjf').y);
 for(const v of map.VENUES)assert.ok(seen.has(v.dx+','+v.dy),v.name+' accesible desde el inicio');
 const economy=new Function('account','progress',between('function wallet()','function openShop(')+';return{wallet,credits};')({profile:{xp:240}},()=>profile.progress);
 assert.equal(economy.credits(),240);economy.wallet().spent=180;assert.equal(economy.credits(),60);economy.wallet().spent=999;assert.equal(economy.credits(),0);
