@@ -932,7 +932,7 @@ async function loadLegends(){if(account.mode!=='live')return;try{const{data}=awa
 const defOf=k=>k.startsWith('lg_')?LEGENDS[k]:k==='custom'?customFighter(myFighter,beltHex(account.profile.belt||'blanco')):ROSTER[k];
 function openSelect(){sel={step:'me',me:null,meKey:null,foeKey:null,cur:null};Snd.theme('title');renderSelect()}
 function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',false),me=sel.step==='me'||sel.circuit;sel.cur=null;
-  const unlocked=unlockedFighters();const keys=me?[...(myFighter?['custom']:[]),...unlocked]:(sel.fromMap?.rivals||['spaz',...unlocked.filter(k=>k!==sel.meKey),...(canEnter(3)?['ryker']:[]),...Object.keys(LEGENDS)]);
+  const unlocked=unlockedFighters();const keys=me?[...(myFighter?['custom']:[]),...unlocked]:(sel.fromMap?.rivals||['spaz',...unlocked.filter(k=>k!==sel.meKey),...(canEnter(CIRCUIT.findIndex(t=>t.id==='cji'))?['ryker']:[]),...Object.keys(LEGENDS)]);
   $('#grid').style.gridTemplateColumns='repeat(4,1fr)';
   const T=sel.circuit?CIRCUIT[circuit.si]:null;
   $('#selTitle').textContent=T?T.name:(me?'ELIGE TU LUCHADOR':'ELIGE A TU RIVAL');
@@ -949,7 +949,7 @@ function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',fal
         <div class="xs"><i class="star"></i> ${esc(sigs)}</div><div class="xs mute">${esc(hpTxt)} · HP ${d.hp}</div><div class="quote">${esc(d.q.intro)}</div>`}})}
 $('#selBack').onclick=()=>{if(sel.circuit){const v=circuit&&circuit.venue;circuit=null;v?enterVenue(v):openMap()}else if(sel.fromMap&&sel.step==='me'){enterVenue(sel.fromMap)}else if(sel.step==='foe'){sel.step='me';renderSelect()}else{show('s-title');refreshTitle()}};
 $('#selGo').onclick=()=>{if(!sel.cur)return;Snd.ok();const first=!store.get('bjjm_trial',false);
-  if(sel.circuit){sel.meKey=sel.cur;sel.me=defOf(sel.cur);sel.foeKey=CIRCUIT[circuit.si].fights[0];circuit.idx=0;openVS();return}
+  if(sel.circuit){sel.meKey=sel.cur;sel.me=defOf(sel.cur);circuit.idx=circuit.startAt||0;sel.foeKey=CIRCUIT[circuit.si].fights[circuit.idx];openVS();return}
   if(sel.step==='me'){sel.meKey=sel.cur;sel.me=defOf(sel.cur);if(first&&!sel.fromMap){sel.foeKey='spaz';openVS()}else{sel.step='foe';renderSelect()}}else{sel.foeKey=sel.cur;openVS()}};
 
 /* ---- VS ---- */
@@ -1026,7 +1026,7 @@ async function turn(a){if(busy||S.over)return;busy=true;menu('wait');
   if(!S.over)await playEvents(resolve(S,'e',aiPick(S,'e')));
   if(!S.over)await playEvents(upkeep(S));
   if(S.over)return endBattle();Snd.theme(musicFor());busy=false;menu('root');prompt_()}
-async function startBattle(def,foe,foeKey,bgOverride){battleHistory=[];$('#logPanel').hidden=true;Snd.wake();S=newMatch(def,foe);FOE=foe;FOEKEY=foeKey;PP=def.pal;EP=foe.pal;BG=bgOverride||foe.bg||'dojo';
+async function startBattle(def,foe,foeKey,bgOverride){battleHistory=[];$('#logPanel').hidden=true;Snd.wake();S=newMatch(def,foe,{underground:!!(circuit&&CIRCUIT[circuit.si].id==='carnales'&&foeKey==='black_johnny')});FOE=foe;FOEKEY=foeKey;PP=def.pal;EP=foe.pal;BG=bgOverride||foe.bg||'dojo';
   const pk=perks();S.p.maxHp+=pk.hp;S.p.hp=S.p.maxHp;S.p.cbonus=pk.cb;for(const k in pk.bag)S.bag[k]+=pk.bag[k];
   if(circuit&&circuit.carry){S.p.hp=Math.max(30,Math.min(S.p.maxHp,circuit.carry.hp+35));S.bag=circuit.carry.bag}
   view=snap(S);busy=true;show('s-battle');fitCanvas(cv);hud();menu('wait');$('#dlgText').textContent='';$('#auto').classList.add('show');
@@ -1038,7 +1038,7 @@ async function startBattle(def,foe,foeKey,bgOverride){battleHistory=[];$('#logPa
   else await say('¡Combate! Diez minutos, sumisión o puntos.');busy=false;menu('root');prompt_()}
 async function endBattle(){busy=true;menu('wait');Snd.stop();Snd.cur=null;const o=S.over,won=o.winner==='p';view=snap(S);hud();
   if(o.by==='tapout')await say(`${S.p.sn} tapea a tiempo. Vivir para pelear otro día.`);
-  Snd.jingle(won);haptic(won?[80,40,80,40,200]:[300]);await say(won?(FOE.boss?'¡DESTRONASTE AL REY! El circuito entero lo va a saber.':`¡Victoria sobre ${FOE.sn}! Oss.`):`${FOE.sn} se lleva el combate.`,undefined,900);
+  Snd.jingle(won);haptic(won?[80,40,80,40,200]:[300]);await say(won?(FOE.boss?`¡Venciste a ${FOE.name}! El circuito entero lo va a saber.`:`¡Victoria sobre ${FOE.sn}! Oss.`):`${FOE.sn} se lleva el combate.`,undefined,900);
   store.set('bjjm_trial',true);$('#auto').classList.remove('show');const beltBefore=account.profile.belt;pending={beltBefore,winner:o.winner,by:o.by,tech:o.tech,pos:S.pos,turns:S.turn,pp:S.p.pts,ep:S.e.pts,foe:FOEKEY,lp:LP_DELTA(o,FOE)};await recordMatch(pending);openGate(pending);busy=false}
 
 /* ---- Resultado + soft gate + Auth ---- */
@@ -1046,9 +1046,11 @@ function gateButtons(mode){const row=$('#gRow'),main=$('#btnSignup');row.innerHT
   const fit=()=>row.style.gridTemplateColumns=row.children.length===1?'1fr':'1fr 1fr';setTimeout(fit,0);
   const add=(txt,cls,fn)=>{const b=document.createElement('button');b.className='btn '+cls;b.textContent=txt;b.onclick=fn;row.appendChild(b)};
   const back=()=>{const v=circuit&&circuit.venue;circuit=null;v?leaveVenue(v):openMap()};
+  if(mode==='johnny'){main.textContent='RETAR A BLACK JOHNNY';main.className='btn plum';main.onclick=nextRound;
+    add('COBRAR 40 CREDITOS Y SALIR','gold',async()=>{if(circuit.cashTaken)return;circuit.cashTaken=true;const pr=progress();pr.bonusCredits=(pr.bonusCredits||0)+40;await saveProgress();if(saveError){pr.bonusCredits-=40;circuit.cashTaken=false;$('#gText').textContent=saveError;return}back()});return}
   if(mode==='next'){main.textContent='SIGUIENTE RONDA';main.className='btn plum';main.onclick=nextRound;add('ABANDONAR TORNEO','dark',back);return}
   if(mode==='stage'){main.textContent='VOLVER AL MAPA';main.className='btn gold';main.onclick=back;add('IR AL MENU','dark',()=>{circuit=null;openHub()});return}
-  if(mode==='retry'){main.textContent='REINTENTAR TORNEO';main.className='btn red';main.onclick=()=>{circuit={si:circuit.si,idx:0,venue:circuit.venue};sel.foeKey=CIRCUIT[circuit.si].fights[0];openVS()};
+  if(mode==='retry'){main.textContent='REINTENTAR TORNEO';main.className='btn red';main.onclick=()=>{circuit={si:circuit.si,idx:circuit.startAt||0,startAt:circuit.startAt||0,venue:circuit.venue};sel.foeKey=CIRCUIT[circuit.si].fights[circuit.idx];openVS()};
     add('VOLVER AL MAPA','dark',back);return}
   const guest=account.mode==='guest';main.textContent=guest?'CREAR CUENTA Y GUARDAR':'CONTINUAR AVENTURA';main.className='btn gold';
   main.onclick=()=>guest?openAuth(true):continueAdventure();
@@ -1059,21 +1061,23 @@ async function openGate(o){show('s-gate');const won=o.winner==='p',b=$('#gBanner
   $('#gHow').textContent=UP((o.by==='points'?'POR PUNTOS':o.by==='tapout'?'RENDICION':'POR SUMISION')+' · '+(o.tech||'')+` · ${o.turns} TURNOS`);
 drawFace($('#gFace').getContext('2d'),FOE.pal,won?'#4a5a6a':'#9a2a20');
   $('#gQuote').innerHTML=`<span style="color:#9a2a20">${esc(FOE.sn)}</span><br>${esc(won?FOE.q.lose:FOE.q.win)}`;
-  let mode='normal';
+  let mode='normal',stageAward=0;
   if(circuit){const T=CIRCUIT[circuit.si];
     if(o.winner!=='p')mode='retry';
+    else if(T.id==='carnales'&&circuit.idx===2){mode='johnny';const pr=progress();pr.johnnyDefeated=true;await saveProgress();circuit.carry=null}
     else if(circuit.idx+1<T.fights.length){mode='next';circuit.carry={hp:S.p.hp,bag:S.bag}}
-    else{mode='stage';const pr=progress();if(!pr.medals.includes(T.id)){pr.medals.push(T.id);pr.stage=Math.max(pr.stage,circuit.si+1);
+    else{mode='stage';const pr=progress();if(!pr.medals.includes(T.id)){pr.medals.push(T.id);pr.stage=Math.max(pr.stage,circuit.si+1);stageAward=T.bonus||0;pr.bonusCredits=(pr.bonusCredits||0)+stageAward;
       await saveProgress()}}}
-  const bonus=0;
-  $('#gLp').textContent=`${o.lp>0?'+':''}${o.lp} LP${bonus?` +${bonus} POR EL TORNEO`:''}  ·  TOTAL ${account.profile.lp||0} LP`;
+  const bonus=stageAward;
+  $('#gLp').textContent=`${o.lp>0?'+':''}${o.lp} LP${bonus?` · BONUS ${bonus} CREDITOS`:''}  ·  TOTAL ${account.profile.lp||0} LP`;
   const gateCircuit=circuit;gateButtons(mode);
   {const nb=nextBelt(account.profile.belt);if(nb&&account.mode!=='guest'&&(account.profile.lp||0)>=beltNeed(nb)&&!progress().examRetryWins)
     await say(`Ya juntaste los LP para tu CINTA ${UP(nb)}. Ve a la ACADEMIA en el mapa y presenta el examen.`,$('#gText'))}
   if(!$('#s-gate').classList.contains('on')||circuit!==gateCircuit)return;
   const T=gateCircuit?CIRCUIT[gateCircuit.si]:null,guest=account.mode==='guest';
-  if(mode==='next')await say(`Pasas a la siguiente ronda de ${T.name}. Recuperas algo de vida, pero no toda: así se siente un torneo real.`,$('#gText'));
-  else if(mode==='stage')await say(`¡Ganaste ${T.name}! Medalla al cuadro y nuevos luchadores disponibles. El siguiente torneo ya está abierto.`,$('#gText'));
+  if(mode==='johnny')await say('Johnny C vencido: desbloqueaste a Johnny C y Vagabundo. Puedes cobrar 40 créditos o enfrentar a Black Johnny con vida completa. Solo vencer a Black Johnny concede la medalla Dos Carnales.',$('#gText'));
+  else if(mode==='next')await say(`Pasas a la siguiente ronda de ${T.name}. Recuperas algo de vida, pero no toda: así se siente un torneo real.`,$('#gText'));
+  else if(mode==='stage')await say(`¡Ganaste ${T.name}! Medalla al cuadro y nuevos luchadores disponibles. Revisa tus próximos destinos.`,$('#gText'));
   else if(mode==='retry')await say(`Caíste en ${T.name}. En un torneo real se acaba ahí: hay que entrar de nuevo desde la primera ronda.`,$('#gText'));
   else await say(guest?'¿Quieres continuar con esta aventura y conquistar el circuito mundial? Guarda tu progreso.':(saveError||'Progreso guardado. El circuito mundial te espera.'),$('#gText'))}
 $('#s-gate').addEventListener('click',e=>{if(!e.target.closest('button'))tapNow()});
@@ -1101,14 +1105,18 @@ $('#aGo').onclick=async()=>{const user=$('#aUser').value.trim(),mail=$('#aMail')
 
 /* ---- Modo aventura: circuito mundial ---- */
 const CIRCUIT=[
- {id:'copa',name:'COPA ACADEMIA',bg:'dojo',lp:20,fights:['spaz','niko'],desc:'Tu primer torneo. Dos combates seguidos.'},
- {id:'ibjjf',name:'IBJJF WORLDS',bg:'ibjjf',lp:40,fights:['keiji','luana','tonelada'],desc:'Con kimono. Tres rondas.'},
- {id:'adcc',name:'ADCC TRIALS',bg:'adcc',lp:60,fights:['kolya','mika','chelo'],desc:'Sin kimono. Tres rondas duras.'},
- {id:'cji',name:'CJI INVITATIONAL',bg:'cji',lp:100,fights:['tito','bazza','ryker'],desc:'Tres medallas para entrar. El Rey te espera al final. Reglas RPG: puntos y sumisión.'}];
+ {id:'copa',name:'COPA HORIZONTE',bg:'dojo',requires:[],bonus:30,fights:['chanops','niko'],desc:'Primer paso. Dos combates y tu primera medalla.'},
+ {id:'flow',name:'COPA FLOW',bg:'dojo',requires:[],bonus:40,fights:['chelo','mika','luana'],desc:'Barridos, movilidad y guardia. Tres estilos diferentes.'},
+ {id:'umbral',name:'DESAFIO UMBRAL',bg:'garage',requires:['copa'],bonus:50,fights:['kolya','bazza','tito'],desc:'Control, paciencia y escapes. Tres rondas de presión.'},
+ {id:'carnales',name:'DOS CARNALES DOJO',bg:'dojo',requires:['copa'],bonus:120,fights:['chanops','vagabundo','johnny','black_johnny'],desc:'Vence a Johnny C. Cobra 40 créditos o reta a Black Johnny por la medalla y 120 créditos.'},
+ {id:'ibjjf',name:'IBJJF WORLDS',bg:'ibjjf',requires:['copa','flow','umbral','carnales'],bonus:70,fights:['keiji','luana','tonelada'],desc:'Reúne las cuatro medallas de dojo. Tres rondas de campeonato.'},
+ {id:'adcc',name:'ADCC TRIALS',bg:'adcc',requires:['ibjjf'],bonus:90,fights:['kolya','mika','chelo'],desc:'Después del Worlds: tres combates sin kimono.'},
+ {id:'cji',name:'CJI INVITATIONAL',bg:'cji',requires:['copa','flow','umbral','carnales','ibjjf','adcc'],bonus:160,fights:['tito','bazza','ryker'],desc:'Cumbre del circuito. Exige las otras seis medallas. Reglas RPG: puntos y sumisión.'}];
 let circuit=null;
-const canEnter=i=>CIRCUIT.slice(0,i).every(t=>progress().medals.includes(t.id));
-const unlockedFighters=()=>{const n=progress().medals.filter(id=>CIRCUIT.some(t=>t.id===id)).length;return PLAYABLE.filter((k,i)=>i<3+n*3)};
-const progress=()=>{const p=account.profile;if(!p.progress||typeof p.progress!=='object')p.progress={stage:0,medals:[]};if(!Array.isArray(p.progress.medals))p.progress.medals=[];return p.progress};
+const missingMedals=i=>{const t=CIRCUIT[i];return t?(t.id==='cji'?CIRCUIT.filter(x=>x.id!=='cji').map(x=>x.id):t.requires).filter(id=>!progress().medals.includes(id)):['invalid']};
+const canEnter=i=>!!CIRCUIT[i]&&missingMedals(i).length===0;
+const unlockedFighters=()=>{const pr=progress(),n=pr.medals.length;return [...PLAYABLE.filter((k,i)=>i<3+n*2),'chanops',...(pr.johnnyDefeated?['vagabundo','johnny']:[]),...(pr.medals.includes('carnales')?['black_johnny']:[])]};
+const progress=()=>{const p=account.profile;if(!p.progress||typeof p.progress!=='object')p.progress={stage:0,medals:[]};if(!Array.isArray(p.progress.medals))p.progress.medals=[];p.progress.medals=[...new Set(p.progress.medals.filter(id=>CIRCUIT.some(t=>t.id===id)))];p.progress.stage=CIRCUIT.findIndex(t=>!p.progress.medals.includes(t.id));if(p.progress.stage<0)p.progress.stage=CIRCUIT.length;return p.progress};
 let saveError='';
 async function saveProgress(){const p=account.profile;saveError='';
   if(account.mode==='live'){try{const{error}=await sb.from('profiles').update({progress:p.progress}).eq('id',account.uid);if(error)throw error}catch(e){saveError='No se guardó en la nube. Reintenta con conexión.'}}
@@ -1121,7 +1129,7 @@ function openCircuit(){show('s-circuit');$('#s-circuit h2').textContent='CIRCUIT
     b.onclick=()=>{circuit={si:i,idx:0};sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,circuit:1};renderSelect()}})}
 function openAtlas(){show('s-circuit');$('#s-circuit h2').textContent='MAPA Y DESTINOS';$('#s-circuit p').textContent='Elige una sede para viajar. Las medallas abren nuevos torneos.';const box=$('#circuitList');box.innerHTML='';
   VENUES.forEach(v=>{const open_=v.stage===null||canEnter(v.stage),b=document.createElement('button');b.className='btn '+(v.id==='shop'?'gold':'dark');b.disabled=!open_;
-    const missing=v.stage===null?[]:CIRCUIT.slice(0,v.stage).filter(t=>!progress().medals.includes(t.id));
+    const missing=v.stage===null?[]:missingMedals(v.stage).map(id=>CIRCUIT.find(t=>t.id===id));
     b.innerHTML='<b>'+esc(v.name)+'</b><br><small>'+(open_?(v.id==='shop'?'SURESTE · KIMONOS, LOOKS Y MEJORAS':v.rivals?'RIVALES PROPIOS · ENTRENAR': 'TORNEO DESBLOQUEADO'):'FALTA: '+missing.map(t=>t.name).join(', '))+'</small>';
     b.onclick=()=>{if(!MAPT)MAPT=buildMap();me.x=v.dx;me.y=v.dy+1;me.px=me.x*TS;me.py=me.y*TS;me.moving=false;held=null;enterVenue(v)};box.appendChild(b)})}
 $('#cBack').onclick=()=>{circuit=null;openHub()};
@@ -1129,13 +1137,14 @@ $('#cBack').onclick=()=>{circuit=null;openHub()};
 /* ==================== MAPA: mundo caminable ==================== */
 const TS=16,MW=36,MH=38;
 const VENUES=[
+ {id:'carnales',name:'DOS CARNALES DOJO',x:25,y:7,w:8,h:4,roof:'#a46f37',wall:'#d4bc90',trim:'#4d3533',sign:'DOS CARNALES',stage:3,rivals:['chanops','vagabundo']},
  {id:'shop',name:'PURAS BRONCAS STORE',x:25,y:27,w:7,h:4,roof:'#267366',wall:'#f0d5a3',trim:'#edb35c',sign:'PURAS BRONCAS STORE',stage:null},
- {id:'flow',name:'DOJO FLOW',x:25,y:17,w:6,h:4,roof:'#465a8c',wall:'#d9dfcf',trim:'#6da9ae',sign:'FLOW',stage:null,rivals:['chelo','mika','luana']},
- {id:'nogi',name:'CLUB DE PIERNAS',x:3,y:28,w:7,h:4,roof:'#734c69',wall:'#d5b7a3',trim:'#dfa975',sign:'LEGS',stage:null,rivals:['kolya','bazza','tito']},
- {id:'cji',name:'CJI INVITATIONAL',x:8,y:1,w:8,h:4,roof:'#57277f',wall:'#2a1442',trim:'#ff4fd8',sign:'CJI',stage:3},
- {id:'ibjjf',name:'IBJJF WORLDS',x:2,y:8,w:7,h:4,roof:'#123a86',wall:'#dfe6f4',trim:'#123a86',sign:'IBJJF',stage:1},
- {id:'adcc',name:'ADCC TRIALS',x:15,y:8,w:7,h:4,roof:'#14151f',wall:'#3a3320',trim:'#f6c744',sign:'ADCC',stage:2},
- {id:'dojo',name:'ACADEMIA PORRADA',x:14,y:16,w:6,h:4,roof:'#c8402f',wall:'#efe4c4',trim:'#9a6232',sign:'DOJO',stage:0,rivals:['aurik','bia','tonelada']},
+ {id:'flow',name:'DOJO FLOW',x:25,y:17,w:6,h:4,roof:'#465a8c',wall:'#d9dfcf',trim:'#6da9ae',sign:'FLOW',stage:1,rivals:['chelo','mika','luana']},
+ {id:'nogi',name:'DOJO UMBRAL',x:3,y:28,w:7,h:4,roof:'#734c69',wall:'#d5b7a3',trim:'#dfa975',sign:'UMBRAL',stage:2,rivals:['kolya','bazza','tito']},
+ {id:'cji',name:'CJI INVITATIONAL',x:8,y:1,w:8,h:4,roof:'#57277f',wall:'#2a1442',trim:'#ff4fd8',sign:'CJI',stage:6},
+ {id:'ibjjf',name:'IBJJF WORLDS',x:2,y:8,w:7,h:4,roof:'#123a86',wall:'#dfe6f4',trim:'#123a86',sign:'IBJJF',stage:4},
+ {id:'adcc',name:'ADCC TRIALS',x:15,y:8,w:7,h:4,roof:'#14151f',wall:'#3a3320',trim:'#f6c744',sign:'ADCC',stage:5},
+ {id:'dojo',name:'ACADEMIA HORIZONTE',x:14,y:16,w:6,h:4,roof:'#c8402f',wall:'#efe4c4',trim:'#9a6232',sign:'DOJO',stage:0,rivals:['aurik','bia','tonelada']},
  {id:'garage',name:'GARAJE · OPEN MAT',x:3,y:17,w:5,h:3,roof:'#6a7080',wall:'#a8583c',trim:'#5a2e1e',sign:'OPEN',stage:null,rivals:['spaz','niko','roman']}];
 VENUES.forEach(v=>{v.dx=v.x+(v.w>>1);v.dy=v.y+v.h-1});
 const NPCS=[
@@ -1143,7 +1152,7 @@ const NPCS=[
  {x:7,y:21,pal:'spaz',lines:['¿Un roll suave? Te juro que ahora sí voy suave.','…La vez pasada fue sin querer.']},
  {x:17,y:13,pal:'kolya',lines:['Dicen que El Rey Rayan desayuna cinturones negros.','Yo digo que desayuna açaí. Mucho açaí.']},
  {x:6,y:13,pal:'luana',lines:['Aquí se gana por ventajas. Literal: gané una final 0 a 0 por una ventaja.','Si tu sumisión casi entra, el árbitro te da ventaja. Cuenta en el empate.']},
- {x:13,y:6,pal:'bazza',lines:['El CJI es solo para invitados, mate.','Gana los otros tres torneos y a lo mejor sales en el póster.']}];
+ {x:13,y:6,pal:'bazza',lines:['El CJI es solo para invitados, mate.','Gana todas las demás medallas: dojos, Worlds y Trials. Entonces te invitan al CJI.']}];
 let MAPT=null;
 function buildMap(){const rnd=(a=>()=>(a=(a*16807)%2147483647)/2147483647)(42),g=[];
   for(let y=0;y<MH;y++){g.push([]);for(let x=0;x<MW;x++)g[y].push(x===0||y===0||x===MW-1||y===MH-1?'T':'.')}
@@ -1206,7 +1215,7 @@ addEventListener('keyup',e=>{if(KEYS[e.key]===held)held=null});
 /* ---- sedes ---- */
 function leaveVenue(v){me.y=v.dy+1;me.x=v.dx;me.px=me.x*TS;me.py=me.y*TS;me.dir='down';openMap()}
 function enterVenue(v){if(v.id==='shop'){openShop(v);return}const pr=progress(),T=v.stage!==null?CIRCUIT[v.stage]:null;
-  if(T&&!canEnter(v.stage)){const need=CIRCUIT.find((t,i)=>i<v.stage&&!pr.medals.includes(t.id));me.y++;me.py=me.y*TS;me.dir='down';mapSay([`${v.name} está cerrado para ti.`,`Primero gana ${need.name}.`]);return}
+  if(T&&!canEnter(v.stage)){const need=CIRCUIT.find(t=>t.id===missingMedals(v.stage)[0]);me.y++;me.py=me.y*TS;me.dir='down';mapSay([`${v.name} está cerrado para ti.`,`Primero gana ${need.name}.`]);return}
   show('s-venue');Snd.ok();$('#vTitle').textContent=v.name;const bg=T?T.bg:v.id==='garage'?'garage':'dojo',vc=$('#vCv');
   drawScene(vc.getContext('2d'),{pos:'STANDING',p:{},e:{}},mapPal(),ROSTER[T?T.fights[T.fights.length-1]:'spaz'].pal,0,{},{bg});
   const box=$('#vBtns');box.innerHTML='';const add=(t,cls,fn,dis)=>{const b=document.createElement('button');b.className='btn '+cls;b.innerHTML=t;b.disabled=!!dis;b.onclick=fn;box.appendChild(b)};
@@ -1214,8 +1223,9 @@ function enterVenue(v){if(v.id==='shop'){openShop(v);return}const pr=progress(),
     add(done?'JUGAR DE NUEVO':'INSCRIBIRME AL TORNEO','plum',()=>{circuit={si:v.stage,idx:0,venue:v};sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,circuit:1};renderSelect()})}
   if(v.id==='dojo'){const nb=nextBelt(account.profile.belt),ex=examState();
     add(nb?`EXAMEN DE CINTA ${UP(nb)}<br><small style="font-size:15px">${ex.msg}</small>`:'YA ERES CINTA NEGRA','gold',()=>openExam(v),!ex.ok)}
-  if(v.rivals){$('#vDesc').innerHTML='<b>Entrena con los especialistas de este dojo.</b><br><span class="sm">Rivales propios, experiencia por cada combate y nuevas técnicas para descubrir.</span>';
+  if(v.rivals){if(!T)$('#vDesc').innerHTML='<b>Entrena con los especialistas de este dojo.</b><br><span class="sm">Rivales propios, experiencia por cada combate y nuevas técnicas para descubrir.</span>';
     add('SPARRING LIBRE','red',()=>{circuit=null;sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,fromMap:v};renderSelect()})}
+  if(v.id==='carnales'&&pr.johnnyDefeated)add('RETAR A BLACK JOHNNY · VIDA COMPLETA','plum',()=>{circuit={si:v.stage,idx:3,startAt:3,venue:v};sel={step:'me',me:null,cur:null,circuit:1};renderSelect()});
   add('SALIR AL MAPA','dark',()=>leaveVenue(v))}
 
 
@@ -1231,7 +1241,7 @@ const BRONCAS={skin:'#d9a070',hair:'#31251f',style:'bald',mustache:'#31251f',top
 const BRONCAS_QUOTES=['Aquí se viene a fluir, carnal. Puro lifestyle.','¿Buscabas plantas mágicas? Tengo una albahaca que revive con agua. Lifestyle.','Tu mejor skin es llegar a entrenar. Pero este kimono también ayuda.','Sin broncas, sin prisa. Posición antes que sumisión, campeón.'];
 let shopVenue=null,shopBusy=false;
 function wallet(){const pr=progress();if(!pr.shop)pr.shop={spent:0,owned:[]};return pr.shop}
-function credits(){return Math.max(0,(account.profile.xp||0)-(wallet().spent||0))}
+function credits(){return Math.max(0,(account.profile.xp||0)+(progress().bonusCredits||0)-(wallet().spent||0))}
 function openShop(v){shopVenue=v;show('s-shop');Snd.theme('title');drawFace($('#shopFace').getContext('2d'),BRONCAS,'#385c58');$('#shopQuote').textContent=BRONCAS_QUOTES[Math.floor(Math.random()*BRONCAS_QUOTES.length)];$('#shopMsg').textContent='';renderShop()}
 function renderShop(){const w=wallet();$('#shopBalance').textContent=credits()+' CREDITOS · NIVEL '+(account.profile.level||1);const list=$('#shopItems');list.innerHTML='';
   SHOP.forEach(item=>{const owned=w.owned.includes(item.id),b=document.createElement('button');b.className='btn '+(owned?'plum':'dark');b.disabled=shopBusy||(!owned&&credits()<item.cost)||(!myFighter&&!!item.look)||(owned&&!item.look);
