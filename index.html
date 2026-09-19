@@ -517,6 +517,12 @@ const SIG={
         {id:'clock',n:'Clock Choke',k:'tec',from:['TURTLE:top'],cost:14,sub:13,dmg:12,chain:['gobehind']}],
  king:[{id:'trash',n:'Trash Talk Viral',k:'tec',from:['*'],cost:6,drain:20,tilt:3,cd:5,fx:'talk',lines:['«Ya sales perdiendo en mis stories, campeón.»','«Mi calentamiento dura más que tu carrera.»','«Tranquilo, te etiqueto en el highlight.»','«¿Eso fue un intento? Avísame cuando empieces.»']},
        {id:'bodytri',n:'Body Triangle',k:'tec',from:['BACK:top'],cost:10,dmg:12,drain:14,lock:3,chain:['rnc']}],
+ deep:[{id:'deep_entry',n:'Abrazo de Media Guardia',k:'pos',from:['GUARD:bottom'],cost:7,to:'HALF:bottom',ch:100,chain:['deep_sweep']},
+       {id:'deep_sweep',n:'Barrido de Media Profunda',k:'pos',from:['HALF:bottom'],cost:14,to:'HALF:top',ch:65,pts:2,chain:['half_pass','deep_choke']},
+       {id:'deep_choke',n:'Estrangulación del Vagabundo',k:'tec',from:['HALF:top','SIDE:top'],cost:15,sub:14,dmg:13,chain:['darce','anaconda']}],
+ forbidden:[{id:'shadow_twister',n:'Twister de Medianoche',k:'tec',from:['BACK:top'],cost:24,sub:20,dmg:18,cd:4,forbidden:1},
+       {id:'shadow_crank',n:'Llave del Eclipse',k:'tec',from:['SIDE:top','MOUNT:top'],cost:24,sub:18,dmg:19,cd:4,forbidden:1}],
+ bravado:[{id:'chanops_talk',n:'Yo Casi Fui Campeón',k:'tec',from:['*'],cost:12,drain:3,tilt:1,cd:5,lines:['«Hoy sí te gano, nomás déjame respirar.»','«Mi técnica secreta todavía está cargando.»']}],
  spaz:[{id:'spazz',n:'Explosión sin Técnica',k:'tec',from:['*'],cost:22,dmg:13},
        {id:'elbow',n:'Codazo "Sin Querer"',k:'tec',from:['*'],cost:12,dmg:9,tilt:1,cd:4,fx:'talk',lines:['«¡Perdón, perdón! ¿Estás bien? …¿Seguimos?»']},
        {id:'deathgrip',n:'Agarre de la Muerte',k:'tec',from:['*'],cost:18,dmg:4,drain:9}],
@@ -562,6 +568,18 @@ const ROSTER={
  roman:{name:'PROFE ROMAN',sn:'PROFE',tag:'VIEJA ESCUELA',from:'MEX',bg:'dojo',spec:'Osoto gari, cruzada, loop choke y clock choke',stats:{SUB:86,PRE:82,GAS:74,VEL:64},hp:112,sets:['oldschool','heavy'],
    q:{intro:'«Llevo 25 años haciendo esto. Tú llevas dos.»',win:'«Eso se llama base, muchacho.»',lose:'«Ya no somos los de antes. Bien hecho.»'},
    pal:{skin:'#c98d5e',hair:'#b8b0a8',style:'short',beard:'#c8c0b8',top:'#3b7dd8',bot:'#3b7dd8',legs:'#3b7dd8',belt:'#14151f',gi:1,bulk:1}},
+ vagabundo:{name:'VAGABUNDO BJJ',sn:'VAGABUNDO',tag:'EL REY DE LA MEDIA GUARDIA',from:'MEX',bg:'dojo',spec:'Media guardia profunda, barridos y estrangulaciones',stats:{SUB:85,PRE:64,GAS:90,VEL:62},hp:105,sets:['deep','oldschool'],
+   q:{intro:'«Desde abajo también se ve el camino.»',win:'«Te perdiste en mi media guardia.»',lose:'«Buen viaje, carnal. Nos vemos en el tatami.»'},
+   pal:{skin:'#b07a4e',hair:'#352b22',style:'long',beard:'#352b22',top:'#62745a',bot:'#394333',belt:'#14151f',band:'#d1a568'}},
+ johnny:{name:'JOHNNY C',sn:'JOHNNY C',tag:'JEFE DE DOS CARNALES',from:'MEX',boss:1,bg:'dojo',theme:'boss',spec:'Presión, pases y control de espalda',stats:{SUB:86,PRE:86,GAS:82,VEL:74},hp:114,sets:['pressure','wrestle'],
+   q:{intro:'«Aquí el respeto se gana rodando.»',win:'«Buen intento. Trabaja esa defensa.»',lose:'«Ganaste. ¿Cobras tus créditos o conoces mi lado oscuro?»'},
+   pal:{skin:'#d9a070',hair:'#251e23',style:'buzz',beard:'#251e23',top:'#e6dfc9',bot:'#e6dfc9',legs:'#e6dfc9',gi:1,belt:'#14151f',bulk:1}},
+ black_johnny:{name:'BLACK JOHNNY',sn:'BLACK J',tag:'DESAFIO DEL ECLIPSE',from:'MEX',boss:1,bg:'cji',theme:'boss',spec:'Versión más fuerte: presión extrema y llaves prohibidas del modo fantasía',stats:{SUB:96,PRE:94,GAS:92,VEL:80},hp:142,sets:['pressure','legs','forbidden'],
+   q:{intro:'«Elegiste el desafío. Ahora mantén la calma.»',win:'«Vuelve con una estrategia. Yo te espero.»',lose:'«Medalla Dos Carnales. Te la ganaste.»'},
+   pal:{skin:'#d9a070',hair:'#251e23',style:'buzz',beard:'#251e23',top:'#252239',bot:'#252239',legs:'#252239',gi:1,belt:'#d7b95e',band:'#ad6cdc',bulk:2,angry:1}},
+ chanops:{name:'CHANOPS',sn:'CHANOPS',tag:'CINTA BLANCA · VALOR DE SOBRA',from:'MEX',joke:1,bg:'garage',spec:'Mucho discurso, poca técnica y un corazón enorme',stats:{SUB:18,PRE:24,GAS:30,VEL:34},hp:55,sets:['bravado'],basics:['single','pull','posture','breathe','frames','reguard','handfight','hideheel','turtle_def'],
+   q:{intro:'«Hoy sí. Hoy gano todo el circuito.»',win:'«¡Te dije! ¡Siempre confié en mí!»',lose:'«Perdí por estrategia. La próxima es la buena.»'},
+   pal:{skin:'#e8b890',hair:'#6a462b',style:'curly',top:'#e6dfc9',bot:'#e6dfc9',legs:'#e6dfc9',gi:1,belt:'#f4f4e4',band:'#e6b355'}},
  ryker:{name:'EL REY RAYAN',sn:'RAYAN',tag:'THE KING',from:'USA',boss:1,bg:'adcc',theme:'boss',lp:25,spec:'Presión, piernas y guerra psicológica',stats:{SUB:90,PRE:94,GAS:85,VEL:68},hp:120,sets:['legs','pressure','king'],
    q:{intro:'«¿Tú eres mi rival? Pensé que eras el de las toallas.»',win:'«Buen intento. Súbelo a tus stories.»',lose:'«…Esto no sale en el highlight.»'},
    pal:{skin:'#e8b890',hair:'#c9a15a',style:'short',beard:'#a8803c',ear:'#e87a8a',top:'#14151f',bot:'#b3261a',belt:'#f6c744',bulk:1,crown:1,angry:1}},
@@ -584,10 +602,10 @@ function customFighter(f,beltCol){const st=STYLES[f.style]||STYLES.guardero,nm=U
 
 function mkFighter(def){const maxSta=Math.round(50+def.stats.GAS*.6);
   return{name:def.name,sn:def.sn,stats:def.stats,pal:def.pal,hp:def.hp,maxHp:def.hp,sta:maxSta,maxSta,
-    tilt:0,def:0,lock:0,grip:0,cd:{},pts:0,adv:0,chain:null,moves:U.concat(...def.sets.map(s=>SIG[s]))}}
-function newMatch(pDef,eDef){return{p:mkFighter(pDef),e:mkFighter(eDef),pos:'STANDING',top:null,turn:0,over:null,bag:{electro:2,tape:1,acai:1}}}
+    tilt:0,def:0,lock:0,grip:0,cd:{},pts:0,adv:0,chain:null,moves:U.filter(m=>!def.basics||def.basics.includes(m.id)).concat(...def.sets.map(s=>SIG[s]))}}
+function newMatch(pDef,eDef,options={}){return{underground:!!options.underground,p:mkFighter(pDef),e:mkFighter(eDef),pos:'STANDING',top:null,turn:0,over:null,bag:{electro:2,tape:1,acai:1}}}
 const roleOf=(S,w)=>S.pos==='STANDING'?'neutral':(S.top===w?'top':'bottom');
-const avail=(S,w,k)=>{const key=S.pos+':'+roleOf(S,w);return S[w].moves.filter(m=>(!k||m.k===k)&&(m.from[0]==='*'||m.from.includes(key)))};
+const avail=(S,w,k)=>{const key=S.pos+':'+roleOf(S,w);return S[w].moves.filter(m=>(!m.forbidden||S.underground)&&(!k||m.k===k)&&(m.from[0]==='*'||m.from.includes(key)))};
 const usable=(S,w,m)=>m.cost<=S[w].sta&&!(S[w].cd[m.id]>0);
 const chained=(S,w,m)=>!!(S[w].chain&&S[w].chain.includes(m.id));
 function posValue(pos,role,legl){if(role==='neutral')return 0;const v=POS_VAL[pos]+(pos==='ASHI'&&legl?3:0);return role==='top'?v:(pos==='GUARD'?0:pos==='HALF'?-1:-v)}
