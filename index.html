@@ -204,6 +204,7 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
 #s-hub{overflow-y:auto}#s-hub .grow{flex-shrink:0}#s-venue{overflow-y:auto}#s-venue #vCv{max-height:30vh;object-fit:contain}
 @media(max-height:700px){.logo b{font-size:30px}.logo span{font-size:16px;margin-top:8px}#tip{min-height:24px;font-size:15px}#s-title .xs{font-size:14px}#titleCv{max-height:24vh}#welcome{font-size:16px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}#screen::after{background:none}}
+#logPanel{max-height:130px;overflow:auto;flex-shrink:0}#logPanel[hidden]{display:none}.battleTools .btn{min-height:30px;padding:3px;font-size:15px}.battleTools{flex-shrink:0}
 </style>
 </head>
 <body>
@@ -249,6 +250,7 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
   </div>
   <div class="posbar" id="posbar"></div>
   <div class="box dialog" id="dlg" role="status" aria-live="polite"><span id="dlgText"></span><button class="next" tabindex="-1">CONTINUAR</button></div>
+  <div class="row battleTools"><button class="btn dark sm" id="battleSpeed">RITMO 1X</button><button class="btn dark sm" id="battleLog">HISTORIAL</button></div><div id="logPanel" class="box sm" hidden></div>
   <div class="menu root" id="menu"></div>
 </section>
 
@@ -930,19 +932,24 @@ function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',fal
 $('#selBack').onclick=()=>{if(sel.circuit){const v=circuit&&circuit.venue;circuit=null;v?enterVenue(v):openMap()}else if(sel.fromMap&&sel.step==='me'){enterVenue(sel.fromMap)}else if(sel.step==='foe'){sel.step='me';renderSelect()}else{show('s-title');refreshTitle()}};
 $('#selGo').onclick=()=>{if(!sel.cur)return;Snd.ok();const first=!store.get('bjjm_trial',false);
   if(sel.circuit){sel.meKey=sel.cur;sel.me=defOf(sel.cur);sel.foeKey=CIRCUIT[circuit.si].fights[0];circuit.idx=0;openVS();return}
-  if(sel.step==='me'){sel.meKey=sel.cur;sel.me=defOf(sel.cur);if(first){sel.foeKey='spaz';openVS()}else{sel.step='foe';renderSelect()}}else{sel.foeKey=sel.cur;openVS()}};
+  if(sel.step==='me'){sel.meKey=sel.cur;sel.me=defOf(sel.cur);if(first&&!sel.fromMap){sel.foeKey='spaz';openVS()}else{sel.step='foe';renderSelect()}}else{sel.foeKey=sel.cur;openVS()}};
 
 /* ---- VS ---- */
 let tapRes=null,skip=false;
 const wait=ms=>new Promise(r=>{const t=setTimeout(()=>{tapRes=null;r()},ms);tapRes=()=>{clearTimeout(t);r()}});
 const tapNow=()=>{skip=true;if(tapRes){const r=tapRes;tapRes=null;r()}};
-let autoText=store.get('bjjm_auto',false);
+let autoText=store.get('bjjm_auto',true),battleSpeed=[1,2,3].includes(store.get('bjjm_speed',2))?store.get('bjjm_speed',2):2;
+let battleHistory=[];
+function refreshSpeed(){$('#battleSpeed').textContent='RITMO '+battleSpeed+'X'}
+$('#battleSpeed').onclick=()=>{battleSpeed=battleSpeed===3?1:battleSpeed+1;store.set('bjjm_speed',battleSpeed);refreshSpeed();tapNow()};refreshSpeed();
+$('#battleLog').onclick=()=>{const p=$('#logPanel');p.hidden=!p.hidden;p.textContent=battleHistory.slice(-12).join(' · ')};
 function setAuto(v){autoText=v;store.set('bjjm_auto',v);$('#auto').classList.toggle('on',v);$('#auto').textContent=v?'AUTO':'TAP'}
 $('#auto').onclick=()=>setAuto(!autoText);setAuto(autoText);
-async function say(text,el=$('#dlgText'),hold){const box=el.closest('.box');el.textContent='';skip=false;
-  for(let i=0;i<text.length;i++){if(skip){el.textContent=text;break}el.textContent+=text[i];if(i%3===0)Snd.tick();await sleep(16)}
+async function say(text,el=$('#dlgText'),hold){const box=el.closest('.box'),screen=el.closest('.scr'),speed=screen?.id==='s-battle'?battleSpeed:1;el.textContent='';skip=false;
+  if(screen?.id==='s-battle'){battleHistory.push(text);if(battleHistory.length>60)battleHistory.shift();$('#logPanel').textContent=battleHistory.slice(-12).join(' · ')}
+  for(let i=0;i<text.length;i++){if(skip){el.textContent=text;break}el.textContent+=text[i];if(i%3===0)Snd.tick();await sleep(Math.max(3,16/speed))}
   skip=false;if(box)box.classList.add('ready');
-  await wait(autoText?Math.max(900,hold||0,text.length*42):20000);
+  await wait(autoText?Math.max(280,Math.min(2400,Math.max(700,hold||0,text.length*26))/speed):20000);
   if(box)box.classList.remove('ready')}
 let vsStarting=false;
 async function openVS(){if(vsStarting)return;vsStarting=true;const me=sel.me,foe=defOf(sel.foeKey),T=circuit?CIRCUIT[circuit.si]:null,ar=ARENAS[(T?T.bg:foe.bg)||'dojo'];
@@ -973,7 +980,7 @@ async function doFx(e){const n=e.n,sign=e.who==='p'?1:-1,tgt=opp(e.who);
   if(n==='takedown'){fxs.shake=16;fxs.flash=5;fxs.spark=8;fxs.flashWho=tgt;fxs.hitT=10;haptic([40,30,160]);Snd.thump();await sleep(360)}
   else if(n==='hit'){fxs.shake=7;fxs.lunge=sign*6;fxs.spark=6;fxs.flashWho=tgt;fxs.hitT=8;haptic(30);Snd.hit();await sleep(200)}
   else if(n==='move'){fxs.lunge=sign*5;haptic(15);Snd.whoosh();await sleep(160)}
-  else if(n==='subtry'){fxs.pulse=true;for(let i=0;i<3;i++){haptic([70,60,40]);Snd.heart();setTimeout(()=>Snd.heart(),170);await sleep(480)}fxs.pulse=false}
+  else if(n==='subtry'){fxs.pulse=true;for(let i=0;i<(battleSpeed===3?1:2);i++){haptic([70,60,40]);Snd.heart();setTimeout(()=>Snd.heart(),170);await sleep(360/battleSpeed)}fxs.pulse=false}
   else if(n==='tapout'){fxs.flash=6;fxs.shake=10;haptic([60,50,60,50,60,50,420]);Snd.thump();await sleep(420)}
   else if(n==='talk'){haptic([15,40,15,40,15,40,15]);Snd.talk();await sleep(260)}
   else if(n==='breathe'){Snd.heal();await sleep(160)}}
@@ -991,8 +998,9 @@ function menu(mode){const m=$('#menu');m.className='menu '+(mode==='root'?'root'
   if(mode==='bag')Object.keys(ITEMS).forEach(id=>add(`<b>${ITEMS[id].n} ×${S.bag[id]}</b><small>${ITEMS[id].d}</small>`,'mv',()=>turn({item:id}),S.bag[id]<=0));
   if(mode==='tap'){$('#dlgText').textContent='¿Tapear ahora? Pierdes el combate, pero conservas más puntos de liga (−8 en vez de −15). Tapear a tiempo es entrenar mañana.';
     add('SI, TAPEAR','red',()=>{S.over={winner:'e',by:'tapout',tech:'Rendición estratégica'};haptic([0,300]);endBattle()})}}
+function tacticalHint(){if(S.p.sta<18)return 'Te falta aire: usa Respirar o electrolitos.';if(S.pos==='STANDING')return 'Derriba para sumar puntos o jala guardia para atacar desde abajo.';if(S.top!=='p')return S.pos==='GUARD'?'Desde abajo puedes barrer o encadenar armbar, triángulo y omoplata.':'Primero escapa o recupera guardia: marcos, cadera y paciencia.';return ['MOUNT','BACK'].includes(S.pos)?'Control dominante: prepara tu sumisión.':'Avanza a montada o espalda antes de finalizar.'}
 function prompt_(){const ch=S.p.chain&&avail(S,'p').filter(m=>chained(S,'p',m)).map(m=>m.n);
-  $('#dlgText').textContent=ch&&ch.length?`¡Cadena abierta! ${ch.join(' y ')} con +${CHAIN_BONUS}%.`:`¿Qué hará ${S.p.sn}? Estás en ${POS[S.pos].n}.`}
+  $('#dlgText').textContent=ch&&ch.length?`¡Cadena abierta! ${ch.join(' y ')} con +${CHAIN_BONUS}%.`:`${POS[S.pos].n}. ${tacticalHint()}`}
 function musicFor(){if(!S||S.over)return null;const lo=Math.min(S.p.hp/S.p.maxHp,S.e.hp/S.e.maxHp);
   return(lo<.34||S.turn>=MAX_TURNS-5)?'clutch':(FOE&&FOE.theme||'battle')}
 async function turn(a){if(busy||S.over)return;busy=true;menu('wait');
@@ -1000,7 +1008,7 @@ async function turn(a){if(busy||S.over)return;busy=true;menu('wait');
   if(!S.over)await playEvents(resolve(S,'e',aiPick(S,'e')));
   if(!S.over)await playEvents(upkeep(S));
   if(S.over)return endBattle();Snd.theme(musicFor());busy=false;menu('root');prompt_()}
-async function startBattle(def,foe,foeKey,bgOverride){Snd.wake();S=newMatch(def,foe);FOE=foe;FOEKEY=foeKey;PP=def.pal;EP=foe.pal;BG=bgOverride||foe.bg||'dojo';
+async function startBattle(def,foe,foeKey,bgOverride){battleHistory=[];$('#logPanel').hidden=true;Snd.wake();S=newMatch(def,foe);FOE=foe;FOEKEY=foeKey;PP=def.pal;EP=foe.pal;BG=bgOverride||foe.bg||'dojo';
   const pk=perks();S.p.maxHp+=pk.hp;S.p.hp=S.p.maxHp;S.p.cbonus=pk.cb;for(const k in pk.bag)S.bag[k]+=pk.bag[k];
   if(circuit&&circuit.carry){S.p.hp=Math.max(30,Math.min(S.p.maxHp,circuit.carry.hp+35));S.bag=circuit.carry.bag}
   view=snap(S);busy=true;show('s-battle');fitCanvas(cv);hud();menu('wait');$('#dlgText').textContent='';$('#auto').classList.add('show');
@@ -1041,10 +1049,11 @@ drawFace($('#gFace').getContext('2d'),FOE.pal,won?'#4a5a6a':'#9a2a20');
       await saveProgress()}}}
   const bonus=0;
   $('#gLp').textContent=`${o.lp>0?'+':''}${o.lp} LP${bonus?` +${bonus} POR EL TORNEO`:''}  ·  TOTAL ${account.profile.lp||0} LP`;
-  gateButtons(mode);
+  const gateCircuit=circuit;gateButtons(mode);
   {const nb=nextBelt(account.profile.belt);if(nb&&account.mode!=='guest'&&(account.profile.lp||0)>=beltNeed(nb)&&!progress().examRetryWins)
     await say(`Ya juntaste los LP para tu CINTA ${UP(nb)}. Ve a la ACADEMIA en el mapa y presenta el examen.`,$('#gText'))}
-  const T=circuit?CIRCUIT[circuit.si]:null,guest=account.mode==='guest';
+  if(!$('#s-gate').classList.contains('on')||circuit!==gateCircuit)return;
+  const T=gateCircuit?CIRCUIT[gateCircuit.si]:null,guest=account.mode==='guest';
   if(mode==='next')await say(`Pasas a la siguiente ronda de ${T.name}. Recuperas algo de vida, pero no toda: así se siente un torneo real.`,$('#gText'));
   else if(mode==='stage')await say(`¡Ganaste ${T.name}! Medalla al cuadro y nuevos luchadores disponibles. El siguiente torneo ya está abierto.`,$('#gText'));
   else if(mode==='retry')await say(`Caíste en ${T.name}. En un torneo real se acaba ahí: hay que entrar de nuevo desde la primera ronda.`,$('#gText'));
