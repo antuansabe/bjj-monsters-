@@ -778,7 +778,10 @@ document.addEventListener('click',e=>{if(e.target.closest('button')){haptic(10);
 const GUEST0={username:'INVITADO',lp:0,wins:0,losses:0,belt:'blanco',level:1};
 let sb=null,account={mode:'guest',profile:store.get('bjjm_guest',{...GUEST0})},myFighter=store.get('bjjm_fighter',null),pending=null;
 function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>no(new Error('No se pudo cargar el cliente de Supabase'));document.head.appendChild(s)})}
-async function sbInit(){if(!CONFIG.SUPABASE_URL||!CONFIG.SUPABASE_ANON_KEY)return null;if(sb)return sb;await loadScript(CONFIG.SUPABASE_JS);sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);return sb}
+let sbDown=false;
+async function sbInit(){if(!CONFIG.SUPABASE_URL||!CONFIG.SUPABASE_ANON_KEY||sbDown)return null;if(sb)return sb;
+  try{await loadScript(CONFIG.SUPABASE_JS);sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);return sb}
+  catch(e){sbDown=true;return null}}
 async function loadProfile(){const{data:{user}}=await sb.auth.getUser();if(!user)return false;const{data:p}=await sb.from('profiles').select('*').eq('id',user.id).single();if(!p)return false;account={mode:'live',profile:p,uid:user.id};
   const{data:f}=await sb.from('fighters').select('*').eq('profile_id',user.id).eq('is_active',true).maybeSingle();if(f)myFighter=Object.assign({id:f.id,name:f.name,style:f.style,rash:f.rashguard_color,short:f.short_color},f.look||{});return true}
 async function recordMatch(o){const won=o.winner==='p',p=account.profile;
@@ -940,7 +943,7 @@ $('#s-gate').addEventListener('click',e=>{if(!e.target.closest('button'))tapNow(
 
 let signup=true;
 function openAuth(su){signup=su;$('#modal').classList.add('on');$('#mTitle').textContent=su?'CREAR CUENTA':'ENTRAR';$('#aGo').textContent=su?'CREAR CUENTA':'ENTRAR';$('#aToggle').textContent=su?'YA TENGO CUENTA':'QUIERO CREAR CUENTA';
-  $('#mUserWrap').hidden=!su;$('#aPass').autocomplete=su?'new-password':'current-password';$('#aMsg').textContent=CONFIG.SUPABASE_URL?'':'MODO DEMO: sin servidor conectado, tu cuenta se guarda solo en este dispositivo.'}
+  $('#mUserWrap').hidden=!su;$('#aPass').autocomplete=su?'new-password':'current-password';$('#aMsg').textContent=(CONFIG.SUPABASE_URL&&!sbDown)?'':'MODO DEMO: sin conexion al servidor, tu cuenta se guarda solo en este dispositivo.'}
 $('#aToggle').onclick=()=>openAuth(!signup);$('#aClose').onclick=()=>$('#modal').classList.remove('on');
 $('#aGo').onclick=async()=>{const user=$('#aUser').value.trim(),mail=$('#aMail').value.trim(),pass=$('#aPass').value,msg=$('#aMsg');
   if(signup&&!/^[A-Za-z0-9_]{3,20}$/.test(user)){msg.textContent='Usuario: 3 a 20 letras, números o _';return}
