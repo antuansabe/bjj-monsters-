@@ -199,7 +199,7 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
 #welcome{margin:6px 0;line-height:1.5}
 #s-title .stack{gap:7px}#s-title .credit{margin:8px 0}
 #s-shop .result canvas{width:88px;height:88px;flex-shrink:0;image-rendering:pixelated}
-#s-shop .result{align-items:center}#shopQuote{margin:0;line-height:1.5}
+#s-shop .result{align-items:center;grid-template-columns:88px minmax(0,1fr);gap:14px}#shopItems .btn:disabled{opacity:.75}#shopQuote{margin:0;line-height:1.5}
 #s-shop .btn small{font-size:16px}#s-shop .grow{flex:1 1 220px}
 #s-hub{overflow-y:auto}#s-hub .grow{flex-shrink:0}#s-venue{overflow-y:auto}#s-venue #vCv{max-height:30vh;object-fit:contain}
 @media(max-height:700px){.logo b{font-size:30px}.logo span{font-size:16px;margin-top:8px}#tip{min-height:24px;font-size:15px}#s-title .xs{font-size:14px}#titleCv{max-height:24vh}#welcome{font-size:16px}}
@@ -1086,13 +1086,13 @@ let saveError='';
 async function saveProgress(){const p=account.profile;saveError='';
   if(account.mode==='live'){try{const{error}=await sb.from('profiles').update({progress:p.progress}).eq('id',account.uid);if(error)throw error}catch(e){saveError='No se guardó en la nube. Reintenta con conexión.'}}
   else store.set(account.mode==='demo'?'bjjm_demo':'bjjm_guest',p)}
-function openCircuit(){show('s-circuit');Snd.theme('title');const pr=progress(),box=$('#circuitList');box.innerHTML='';
+function openCircuit(){show('s-circuit');$('#s-circuit h2').textContent='CIRCUITO DE TORNEOS';$('#s-circuit p').textContent='Gana todas las rondas para conseguir la medalla.';Snd.theme('title');const pr=progress(),box=$('#circuitList');box.innerHTML='';
   CIRCUIT.forEach((t,i)=>{const done=pr.medals.includes(t.id),open_=canEnter(i);
     const b=document.createElement('button');b.className='btn stagecard '+(done?'gold':open_?'dark':'dark lock');b.disabled=!open_;
     b.innerHTML=`<canvas width="24" height="24"></canvas><span><b>${esc(t.name)}</b><small>${esc(t.desc)}</small><small class="mute">${t.fights.length} combates · Medalla + luchadores</small></span><span class="medal">${done?'MEDALLA':open_?'ABIERTO':'CERRADO'}</span>`;
     box.appendChild(b);drawFace(b.querySelector('canvas').getContext('2d'),ROSTER[t.fights[t.fights.length-1]].pal,done?'#4a5a3a':'#9a2a20');
     b.onclick=()=>{circuit={si:i,idx:0};sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,circuit:1};renderSelect()}})}
-function openAtlas(){show('s-circuit');const box=$('#circuitList');box.innerHTML='';
+function openAtlas(){show('s-circuit');$('#s-circuit h2').textContent='MAPA Y DESTINOS';$('#s-circuit p').textContent='Elige una sede para viajar. Las medallas abren nuevos torneos.';const box=$('#circuitList');box.innerHTML='';
   VENUES.forEach(v=>{const open_=v.stage===null||canEnter(v.stage),b=document.createElement('button');b.className='btn '+(v.id==='shop'?'gold':'dark');b.disabled=!open_;
     const missing=v.stage===null?[]:CIRCUIT.slice(0,v.stage).filter(t=>!progress().medals.includes(t.id));
     b.innerHTML='<b>'+esc(v.name)+'</b><br><small>'+(open_?(v.id==='shop'?'SURESTE · KIMONOS, LOOKS Y MEJORAS':v.rivals?'RIVALES PROPIOS · ENTRENAR': 'TORNEO DESBLOQUEADO'):'FALTA: '+missing.map(t=>t.name).join(', '))+'</small>';

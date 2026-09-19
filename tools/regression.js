@@ -26,3 +26,20 @@ for(const v of map.VENUES)assert.ok(seen.has(v.dx+','+v.dy),v.name+' accesible d
 const economy=new Function('account','progress',between('function wallet()','function openShop(')+';return{wallet,credits};')({profile:{xp:240}},()=>profile.progress);
 assert.equal(economy.credits(),240);economy.wallet().spent=180;assert.equal(economy.credits(),60);economy.wallet().spent=999;assert.equal(economy.credits(),0);
 console.log('OK: sintaxis, acciones legales, cadenas, inventario, fin de combate, CJI, 8 sedes accesibles y créditos.');
+// Compras: descuenta una vez, equipar es gratis y un fallo de guardado revierte el cargo.
+(async()=>{
+ const source=between('async function buyItem(item)',"$('#shopBack')");
+ const harness=new Function('source',`
+   let account={mode:'guest'},myFighter={rash:'#e0483c'},shopBusy=false,saveError='',fail=false;
+   const pr={shop:{spent:0,owned:[]}},msg={textContent:''};
+   const wallet=()=>pr.shop,credits=()=>240-pr.shop.spent,progress=()=>pr;
+   const renderShop=()=>{},$=()=>msg,store={set(){}},Snd={ok(){}};
+   async function saveProgress(){saveError=fail?'Sin conexión':''}
+   return eval(source+';({buyItem,get:()=>({spent:pr.shop.spent,owned:pr.shop.owned,fighter:myFighter}),fail:()=>{fail=true}})');
+ `)(source);
+ const item={id:'gi',cost:120,look:{gi:true,rash:'#3f7562'}};
+ await harness.buyItem(item);assert.equal(harness.get().spent,120);assert.equal(harness.get().fighter.rash,'#3f7562');
+ await harness.buyItem(item);assert.equal(harness.get().spent,120,'Equipar de nuevo no cobra');
+ harness.fail();await harness.buyItem({id:'band',cost:80,look:{band:'#69c9b4'}});assert.equal(harness.get().spent,120);assert.ok(!harness.get().owned.includes('band'));
+ console.log('OK: compra, equipamiento gratuito y reversión por fallo de guardado.');
+})().catch(e=>{console.error(e);process.exitCode=1});
