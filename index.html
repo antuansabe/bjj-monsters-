@@ -852,7 +852,7 @@ async function loadProfile(){const{data:{user}}=await sb.auth.getUser();if(!user
   const{data:f}=await sb.from('fighters').select('*').eq('profile_id',user.id).eq('is_active',true).maybeSingle();myFighter=f?Object.assign({id:f.id,name:f.name,style:f.style,rash:f.rashguard_color,short:f.short_color},f.look||{}):null;store.set('bjjm_returning',true);return true}
 async function recordMatch(o){const won=o.winner==='p',p=account.profile;
   if(account.mode==='live'){try{const{data,error}=await sb.rpc('record_pve_match',{p_npc:o.foe,p_won:won,p_result:o.by==='exhaust'?'submission':o.by,p_technique:o.tech||null,p_position:o.pos,p_turns:o.turns,p_points:o.pp,p_opp_points:o.ep});
-      if(!error&&data){account.profile=data;return}}catch(e){}}
+      if(error)throw error;if(data){account.profile=data;saveError='';return true}}catch(e){saveError='No se registró el combate en la nube. Revisa tu conexión.';return false}}
   p.lp=Math.max(0,(p.lp||0)+o.lp);won?p.wins++:p.losses++;p.xp=(p.xp||0)+(won?60:20);p.level=1+Math.floor(p.xp/200);
   if(account.mode!=='live')store.set(account.mode==='demo'?'bjjm_demo':'bjjm_guest',p)}
 function perks(){const p=account.profile,b=BELT_PERKS[p.belt||'blanco']||BELT_PERKS.blanco,lv=Math.min(15,(p.level||1)-1);return{hp:b.hp+lv*2,bag:b.bag||{},cb:b.cb||CHAIN_BONUS,lv}}
@@ -878,7 +878,7 @@ async function loadLegends(){if(account.mode!=='live')return;try{const{data}=awa
 const defOf=k=>k.startsWith('lg_')?LEGENDS[k]:k==='custom'?customFighter(myFighter,beltHex(account.profile.belt||'blanco')):ROSTER[k];
 function openSelect(){sel={step:'me',me:null,meKey:null,foeKey:null,cur:null};Snd.theme('title');renderSelect()}
 function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',false),me=sel.step==='me'||sel.circuit;sel.cur=null;
-  const keys=me?[...(myFighter?['custom']:[]),...PLAYABLE]:['ryker',...PLAYABLE.filter(k=>k!==sel.meKey),'spaz',...Object.keys(LEGENDS)];
+  const unlocked=unlockedFighters();const keys=me?[...(myFighter?['custom']:[]),...unlocked]:(sel.fromMap?.rivals||['spaz',...unlocked.filter(k=>k!==sel.meKey),...(canEnter(3)?['ryker']:[]),...Object.keys(LEGENDS)]);
   $('#grid').style.gridTemplateColumns='repeat(4,1fr)';
   const T=sel.circuit?CIRCUIT[circuit.si]:null;
   $('#selTitle').textContent=T?T.name:(me?'ELIGE TU LUCHADOR':'ELIGE A TU RIVAL');
@@ -1003,17 +1003,17 @@ drawFace($('#gFace').getContext('2d'),FOE.pal,won?'#4a5a6a':'#9a2a20');
     if(o.winner!=='p')mode='retry';
     else if(circuit.idx+1<T.fights.length){mode='next';circuit.carry={hp:S.p.hp,bag:S.bag}}
     else{mode='stage';const pr=progress();if(!pr.medals.includes(T.id)){pr.medals.push(T.id);pr.stage=Math.max(pr.stage,circuit.si+1);
-      account.profile.lp=(account.profile.lp||0)+T.lp;await saveProgress()}}}
-  const bonus=mode==='stage'?CIRCUIT[circuit.si].lp:0;
+      await saveProgress()}}}
+  const bonus=0;
   $('#gLp').textContent=`${o.lp>0?'+':''}${o.lp} LP${bonus?` +${bonus} POR EL TORNEO`:''}  ·  TOTAL ${account.profile.lp||0} LP`;
   gateButtons(mode);
   {const nb=nextBelt(account.profile.belt);if(nb&&account.mode!=='guest'&&(account.profile.lp||0)>=beltNeed(nb)&&!progress().examRetryWins)
     await say(`Ya juntaste los LP para tu CINTA ${UP(nb)}. Ve a la ACADEMIA en el mapa y presenta el examen.`,$('#gText'))}
   const T=circuit?CIRCUIT[circuit.si]:null,guest=account.mode==='guest';
   if(mode==='next')await say(`Pasas a la siguiente ronda de ${T.name}. Recuperas algo de vida, pero no toda: así se siente un torneo real.`,$('#gText'));
-  else if(mode==='stage')await say(`¡Ganaste ${T.name}! +${T.lp} LP y medalla al cuadro. El siguiente torneo ya está abierto.`,$('#gText'));
+  else if(mode==='stage')await say(`¡Ganaste ${T.name}! Medalla al cuadro y nuevos luchadores disponibles. El siguiente torneo ya está abierto.`,$('#gText'));
   else if(mode==='retry')await say(`Caíste en ${T.name}. En un torneo real se acaba ahí: hay que entrar de nuevo desde la primera ronda.`,$('#gText'));
-  else await say(guest?'¿Quieres continuar con esta aventura y conquistar el circuito mundial? Guarda tu progreso.':'Progreso guardado. El circuito mundial te espera.',$('#gText'))}
+  else await say(guest?'¿Quieres continuar con esta aventura y conquistar el circuito mundial? Guarda tu progreso.':(saveError||'Progreso guardado. El circuito mundial te espera.'),$('#gText'))}
 $('#s-gate').addEventListener('click',e=>{if(!e.target.closest('button'))tapNow()});
 
 let signup=true;
@@ -1044,14 +1044,17 @@ const CIRCUIT=[
  {id:'adcc',name:'ADCC TRIALS',bg:'adcc',lp:60,fights:['kolya','mika','chelo'],desc:'Sin kimono. Tres rondas duras.'},
  {id:'cji',name:'CJI INVITATIONAL',bg:'cji',lp:100,fights:['tito','bazza','ryker'],desc:'Solo sumision. El Rey te espera al final.'}];
 let circuit=null;
+const canEnter=i=>CIRCUIT.slice(0,i).every(t=>progress().medals.includes(t.id));
+const unlockedFighters=()=>{const n=progress().medals.filter(id=>CIRCUIT.some(t=>t.id===id)).length;return PLAYABLE.filter((k,i)=>i<3+n*3)};
 const progress=()=>{const p=account.profile;if(!p.progress||typeof p.progress!=='object')p.progress={stage:0,medals:[]};if(!Array.isArray(p.progress.medals))p.progress.medals=[];return p.progress};
-async function saveProgress(){const p=account.profile;
-  if(account.mode==='live'){try{await sb.from('profiles').update({progress:p.progress}).eq('id',account.uid)}catch(e){}}
+let saveError='';
+async function saveProgress(){const p=account.profile;saveError='';
+  if(account.mode==='live'){try{const{error}=await sb.from('profiles').update({progress:p.progress}).eq('id',account.uid);if(error)throw error}catch(e){saveError='No se guardó en la nube. Reintenta con conexión.'}}
   else store.set(account.mode==='demo'?'bjjm_demo':'bjjm_guest',p)}
 function openCircuit(){show('s-circuit');Snd.theme('title');const pr=progress(),box=$('#circuitList');box.innerHTML='';
-  CIRCUIT.forEach((t,i)=>{const done=pr.medals.includes(t.id),open_=i<=pr.stage;
+  CIRCUIT.forEach((t,i)=>{const done=pr.medals.includes(t.id),open_=canEnter(i);
     const b=document.createElement('button');b.className='btn stagecard '+(done?'gold':open_?'dark':'dark lock');b.disabled=!open_;
-    b.innerHTML=`<canvas width="24" height="24"></canvas><span><b>${esc(t.name)}</b><small>${esc(t.desc)}</small><small class="mute">${t.fights.length} combates · +${t.lp} LP</small></span><span class="medal">${done?'MEDALLA':open_?'ABIERTO':'CERRADO'}</span>`;
+    b.innerHTML=`<canvas width="24" height="24"></canvas><span><b>${esc(t.name)}</b><small>${esc(t.desc)}</small><small class="mute">${t.fights.length} combates · Medalla + luchadores</small></span><span class="medal">${done?'MEDALLA':open_?'ABIERTO':'CERRADO'}</span>`;
     box.appendChild(b);drawFace(b.querySelector('canvas').getContext('2d'),ROSTER[t.fights[t.fights.length-1]].pal,done?'#4a5a3a':'#9a2a20');
     b.onclick=()=>{circuit={si:i,idx:0};sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,circuit:1};renderSelect()}})}
 $('#cBack').onclick=()=>{circuit=null;openHub()};
@@ -1062,8 +1065,8 @@ const VENUES=[
  {id:'cji',name:'CJI INVITATIONAL',x:8,y:1,w:8,h:4,roof:'#57277f',wall:'#2a1442',trim:'#ff4fd8',sign:'CJI',stage:3},
  {id:'ibjjf',name:'IBJJF WORLDS',x:2,y:8,w:7,h:4,roof:'#123a86',wall:'#dfe6f4',trim:'#123a86',sign:'IBJJF',stage:1},
  {id:'adcc',name:'ADCC TRIALS',x:15,y:8,w:7,h:4,roof:'#14151f',wall:'#3a3320',trim:'#f6c744',sign:'ADCC',stage:2},
- {id:'dojo',name:'ACADEMIA PORRADA',x:14,y:16,w:6,h:4,roof:'#c8402f',wall:'#efe4c4',trim:'#9a6232',sign:'DOJO',stage:0},
- {id:'garage',name:'GARAJE · OPEN MAT',x:3,y:17,w:5,h:3,roof:'#6a7080',wall:'#a8583c',trim:'#5a2e1e',sign:'OPEN',stage:null}];
+ {id:'dojo',name:'ACADEMIA PORRADA',x:14,y:16,w:6,h:4,roof:'#c8402f',wall:'#efe4c4',trim:'#9a6232',sign:'DOJO',stage:0,rivals:['aurik','bia','tonelada']},
+ {id:'garage',name:'GARAJE · OPEN MAT',x:3,y:17,w:5,h:3,roof:'#6a7080',wall:'#a8583c',trim:'#5a2e1e',sign:'OPEN',stage:null,rivals:['spaz','niko','roman']}];
 VENUES.forEach(v=>{v.dx=v.x+(v.w>>1);v.dy=v.y+v.h-1});
 const NPCS=[
  {x:11,y:15,pal:'roman',lines:['Posición antes que sumisión. Y córtate las uñas, por favor.','Si juntas los LP para tu siguiente cinta, ven a la academia a presentar el examen.']},
@@ -1101,7 +1104,7 @@ function drawMap(c,fr){const VW=160,VH=c.canvas.height;c.imageSmoothingEnabled=f
     if(t===','){c.fillStyle='#f6c744';c.fillRect(X+4,Y+5,2,2);c.fillStyle='#ff7ab0';c.fillRect(X+10,Y+10,2,2);c.fillStyle='#3d8a35';c.fillRect(X+5,Y+7,1,2);c.fillRect(X+11,Y+12,1,2)}
     if(t==='~'){c.fillStyle='#3b7dd8';c.fillRect(X,Y,TS,TS);c.fillStyle='#8fc4e8';const o=(fr>>4)%8;c.fillRect(X+((3+o)%14),Y+4,4,1);c.fillRect(X+((9+o)%14),Y+11,3,1)}
     if(t==='T'){c.fillStyle='#2f7a35';c.fillRect(X+1,Y,14,12);c.fillStyle='#3d9444';c.fillRect(X+2,Y+1,9,6);c.fillStyle='#1f5a28';c.fillRect(X+1,Y+10,14,2);c.fillStyle='#6a4526';c.fillRect(X+6,Y+12,4,4)}}
-  for(const v of VENUES){const X=v.x*TS,Y=v.y*TS,Wd=v.w*TS,Hh=v.h*TS,open_=v.stage===null||v.stage<=progress().stage,done=v.stage!==null&&progress().medals.includes(CIRCUIT[v.stage].id);
+  for(const v of VENUES){const X=v.x*TS,Y=v.y*TS,Wd=v.w*TS,Hh=v.h*TS,open_=v.stage===null||canEnter(v.stage),done=v.stage!==null&&progress().medals.includes(CIRCUIT[v.stage].id);
     c.fillStyle=INK;c.fillRect(X-1,Y-1,Wd+2,Hh+2);c.fillStyle=v.wall;c.fillRect(X,Y+Hh*.45,Wd,Hh*.55);c.fillStyle=v.roof;c.fillRect(X,Y,Wd,Hh*.45+2);
     c.fillStyle=shade(v.roof,1.25);c.fillRect(X,Y,Wd,3);c.fillStyle=v.trim;c.fillRect(X,Y+Hh*.45+1,Wd,2);
     for(let i=1;i<v.w;i+=2)if(v.x+i!==v.dx){c.fillStyle='#8fc4e8';c.fillRect(X+i*TS+3,Y+Hh-13,9,7);c.fillStyle=INK;c.fillRect(X+i*TS+7,Y+Hh-13,1,7)}
@@ -1124,7 +1127,8 @@ function openMap(fresh){circuit=null;if(!MAPT)MAPT=buildMap();show('s-map');Snd.
   if(fresh&&!store.get('bjjm_maptip',false)){store.set('bjjm_maptip',true);mapSay(['Este es el circuito. Camina con la cruceta y entra por la puerta de cada sede.','Con el botón A hablas con la gente. Empieza por la ACADEMIA, a la derecha.'])}}
 document.querySelectorAll('.dpad button').forEach(b=>{const d=b.dataset.d,on=e=>{e.preventDefault();Snd.wake();held=d;b.classList.add('held')},off=()=>{if(held===d)held=null;b.classList.remove('held')};
   b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off))});
-$('#btnA').onclick=interact;$('#mapHub').onclick=()=>openHub();
+addEventListener('blur',()=>{held=null});
+$('#btnA').onclick=()=>mapBusy?tapNow():interact();$('#mapHub').onclick=()=>openHub();
 const KEYS={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right'};
 addEventListener('keydown',e=>{if(!$('#s-map').classList.contains('on'))return;if(KEYS[e.key]){held=KEYS[e.key];e.preventDefault()}else if(e.key===' '||e.key==='Enter'){mapBusy?tapNow():interact();e.preventDefault()}});
 addEventListener('keyup',e=>{if(KEYS[e.key]===held)held=null});
@@ -1132,15 +1136,15 @@ addEventListener('keyup',e=>{if(KEYS[e.key]===held)held=null});
 /* ---- sedes ---- */
 function leaveVenue(v){me.y=v.dy+1;me.x=v.dx;me.px=me.x*TS;me.py=me.y*TS;me.dir='down';openMap()}
 function enterVenue(v){const pr=progress(),T=v.stage!==null?CIRCUIT[v.stage]:null;
-  if(T&&v.stage>pr.stage){const need=CIRCUIT[v.stage-1];me.y++;me.py=me.y*TS;me.dir='down';mapSay([`${v.name} está cerrado para ti.`,`Primero gana ${need.name}.`]);return}
+  if(T&&!canEnter(v.stage)){const need=CIRCUIT.find((t,i)=>i<v.stage&&!pr.medals.includes(t.id));me.y++;me.py=me.y*TS;me.dir='down';mapSay([`${v.name} está cerrado para ti.`,`Primero gana ${need.name}.`]);return}
   show('s-venue');Snd.ok();$('#vTitle').textContent=v.name;const bg=T?T.bg:v.id==='garage'?'garage':'dojo',vc=$('#vCv');
   drawScene(vc.getContext('2d'),{pos:'STANDING',p:{},e:{}},mapPal(),ROSTER[T?T.fights[T.fights.length-1]:'spaz'].pal,0,{},{bg});
   const box=$('#vBtns');box.innerHTML='';const add=(t,cls,fn,dis)=>{const b=document.createElement('button');b.className='btn '+cls;b.innerHTML=t;b.disabled=!!dis;b.onclick=fn;box.appendChild(b)};
-  if(T){const done=pr.medals.includes(T.id);$('#vDesc').innerHTML=`<b>${esc(T.desc)}</b><br><span class="sm">${T.fights.length} combates seguidos · +${T.lp} LP y medalla${done?' · <span style="color:#2f7a35">YA LA TIENES</span>':''}</span>`;
+  if(T){const done=pr.medals.includes(T.id);$('#vDesc').innerHTML=`<b>${esc(T.desc)}</b><br><span class="sm">${T.fights.length} combates seguidos · medalla y nuevos luchadores${done?' · <span style="color:#2f7a35">YA LA TIENES</span>':''}</span>`;
     add(done?'JUGAR DE NUEVO':'INSCRIBIRME AL TORNEO','plum',()=>{circuit={si:v.stage,idx:0,venue:v};sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,circuit:1};renderSelect()})}
   if(v.id==='dojo'){const nb=nextBelt(account.profile.belt),ex=examState();
     add(nb?`EXAMEN DE CINTA ${UP(nb)}<br><small style="font-size:15px">${ex.msg}</small>`:'YA ERES CINTA NEGRA','gold',()=>openExam(v),!ex.ok)}
-  if(v.id==='garage'){$('#vDesc').innerHTML='<b>Open mat del domingo.</b><br><span class="sm">Sparring libre contra quien quieras. Da experiencia y LP, sin presión de torneo.</span>';
+  if(v.rivals){$('#vDesc').innerHTML='<b>Entrena con los especialistas de este dojo.</b><br><span class="sm">Rivales propios, experiencia por cada combate y nuevas técnicas para descubrir.</span>';
     add('SPARRING LIBRE','red',()=>{circuit=null;sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,fromMap:v};renderSelect()})}
   add('SALIR AL MAPA','dark',()=>leaveVenue(v))}
 
@@ -1182,7 +1186,7 @@ async function examPass(){const E=EX,p=account.profile;[...$('#pads').children].
 const BELTS=[['blanco','#f4f4e4'],['azul','#3b7dd8'],['morado','#8a4fc2'],['marron','#7a4a24'],['negro','#14151f']];
 function openHub(){show('s-hub');loadLegends();Snd.theme('title');const p=account.profile;$('#hubName').textContent=UP(p.username||'');
   const pk0=perks(),nb0=nextBelt(p.belt);$('#hubMeta').textContent=`CINTA ${UP(p.belt||'blanco')} · NIVEL ${p.level||1} · ${p.lp||0} LP · ${p.wins||0}V ${p.losses||0}D · +${pk0.hp} HP`+(nb0?` · EXAMEN ${UP(nb0)}: ${beltNeed(nb0)} LP`:'');
-  $('#hubMode').textContent=account.mode==='live'?'PROGRESO GUARDADO EN LA NUBE':'MODO DEMO · GUARDADO EN ESTE DISPOSITIVO';
+  $('#hubMode').textContent=account.mode==='live'?(saveError||'PROGRESO GUARDADO EN LA NUBE'):'MODO DEMO · GUARDADO EN ESTE DISPOSITIVO';
   $('#tBuildLabel').textContent=myFighter?'EDITAR LUCHADOR':'CREAR LUCHADOR';
   const pr=progress(),nx=CIRCUIT[Math.min(pr.stage,CIRCUIT.length-1)];
   $('#tCircuitSub').textContent=pr.medals.length>=CIRCUIT.length?'Circuito completo. Eres leyenda.':`${pr.medals.length}/${CIRCUIT.length} medallas · Siguiente: ${nx.name}`}
