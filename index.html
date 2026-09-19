@@ -272,6 +272,15 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
   <div class="stack" id="vBtns"></div>
 </section>
 
+<section class="scr" id="s-shop">
+  <h2 class="pix">PUROS BRONCAS</h2>
+  <div class="box result"><canvas id="shopFace" width="24" height="24" aria-label="Don Broncas, calvo y con bigote"></canvas><p class="sm" id="shopQuote"></p></div>
+  <p class="sm center" id="shopBalance"></p>
+  <p class="xs center mute">Gana 60 créditos por victoria y 20 por participar. Comprar no reduce tu nivel.</p>
+  <div class="stack grow" id="shopItems" style="overflow:auto"></div>
+  <p class="msg" id="shopMsg" role="status"></p>
+  <button class="btn dark" id="shopBack">VOLVER AL MAPA</button>
+</section>
 <section class="scr" id="s-exam">
   <h2 class="pix" id="exTitle">EXAMEN DE CINTA</h2>
   <p class="sm" id="exInfo" style="margin:0;min-height:52px"></p>
@@ -780,7 +789,7 @@ function drawFace(c,p,bgc){const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,
   r(8,10,3,2,'#fff');r(13,10,3,2,'#fff');r(9,10,1,2,INK);r(14,10,1,2,INK);
   const bw=st==='bald'||st==='buzz'?INK:h;r(8,8,3,1,bw);r(13,8,3,1,bw);if(p.angry){r(10,9,1,1,bw);r(13,9,1,1,bw);r(8,8,1,1,s);r(15,8,1,1,s)}
   r(11,12,2,2,sd);if(p.beard){r(6,13,2,4,p.beard);r(16,13,2,4,p.beard);r(7,15,10,3,p.beard);r(8,18,8,1,p.beard)}
-  r(10,15,4,1,p.angry?INK:'#8a2a20');if(!p.angry)r(14,14,1,1,'#8a2a20');
+  if(p.mustache){r(8,14,8,1,p.mustache);r(8,15,2,1,p.mustache);r(14,15,2,1,p.mustache)}r(10,16,4,1,p.angry?INK:'#8a2a20');if(!p.angry)r(14,14,1,1,'#8a2a20');
   if(p.crown){r(6,0,12,3,'#f6c744');r(6,-1,2,1,'#f6c744');r(11,-1,2,1,'#f6c744');r(16,-1,2,1,'#f6c744');r(11,1,2,1,'#e0483c')}}
 /*GFX-END*/
 
@@ -855,7 +864,7 @@ async function recordMatch(o){const won=o.winner==='p',p=account.profile;
       if(error)throw error;if(data){account.profile=data;saveError='';return true}}catch(e){saveError='No se registró el combate en la nube. Revisa tu conexión.';return false}}
   p.lp=Math.max(0,(p.lp||0)+o.lp);won?p.wins++:p.losses++;p.xp=(p.xp||0)+(won?60:20);p.level=1+Math.floor(p.xp/200);
   if(account.mode!=='live')store.set(account.mode==='demo'?'bjjm_demo':'bjjm_guest',p)}
-function perks(){const p=account.profile,b=BELT_PERKS[p.belt||'blanco']||BELT_PERKS.blanco,lv=Math.min(15,(p.level||1)-1);return{hp:b.hp+lv*2,bag:b.bag||{},cb:b.cb||CHAIN_BONUS,lv}}
+function perks(){const p=account.profile,b=BELT_PERKS[p.belt||'blanco']||BELT_PERKS.blanco,lv=Math.min(15,(p.level||1)-1);return{hp:b.hp+lv*2+(progress().shop?.owned?.includes('conditioning')?6:0),bag:b.bag||{},cb:b.cb||CHAIN_BONUS,lv}}
 
 /* ---- Render loop ---- */
 const mcv=$('#mapCv'),mcx=mcv.getContext('2d');
@@ -1042,6 +1051,9 @@ const CIRCUIT=[
  {id:'copa',name:'COPA ACADEMIA',bg:'dojo',lp:20,fights:['spaz','niko'],desc:'Tu primer torneo. Dos combates seguidos.'},
  {id:'ibjjf',name:'IBJJF WORLDS',bg:'ibjjf',lp:40,fights:['keiji','luana','tonelada'],desc:'Con kimono. Tres rondas.'},
  {id:'adcc',name:'ADCC TRIALS',bg:'adcc',lp:60,fights:['kolya','mika','chelo'],desc:'Sin kimono. Tres rondas duras.'},
+ {id:'shop',name:'PUROS BRONCAS STORE',x:25,y:27,w:7,h:4,roof:'#267366',wall:'#f0d5a3',trim:'#edb35c',sign:'BRONCAS',stage:null},
+ {id:'flow',name:'DOJO FLOW',x:25,y:17,w:6,h:4,roof:'#465a8c',wall:'#d9dfcf',trim:'#6da9ae',sign:'FLOW',stage:null,rivals:['chelo','mika','luana']},
+ {id:'nogi',name:'CLUB DE PIERNAS',x:3,y:28,w:7,h:4,roof:'#734c69',wall:'#d5b7a3',trim:'#dfa975',sign:'LEGS',stage:null,rivals:['kolya','bazza','tito']},
  {id:'cji',name:'CJI INVITATIONAL',bg:'cji',lp:100,fights:['tito','bazza','ryker'],desc:'Solo sumision. El Rey te espera al final.'}];
 let circuit=null;
 const canEnter=i=>CIRCUIT.slice(0,i).every(t=>progress().medals.includes(t.id));
@@ -1060,8 +1072,11 @@ function openCircuit(){show('s-circuit');Snd.theme('title');const pr=progress(),
 $('#cBack').onclick=()=>{circuit=null;openHub()};
 
 /* ==================== MAPA: mundo caminable ==================== */
-const TS=16,MW=24,MH=26;
+const TS=16,MW=36,MH=38;
 const VENUES=[
+ {id:'shop',name:'PUROS BRONCAS STORE',x:25,y:27,w:7,h:4,roof:'#267366',wall:'#f0d5a3',trim:'#edb35c',sign:'BRONCAS',stage:null},
+ {id:'flow',name:'DOJO FLOW',x:25,y:17,w:6,h:4,roof:'#465a8c',wall:'#d9dfcf',trim:'#6da9ae',sign:'FLOW',stage:null,rivals:['chelo','mika','luana']},
+ {id:'nogi',name:'CLUB DE PIERNAS',x:3,y:28,w:7,h:4,roof:'#734c69',wall:'#d5b7a3',trim:'#dfa975',sign:'LEGS',stage:null,rivals:['kolya','bazza','tito']},
  {id:'cji',name:'CJI INVITATIONAL',x:8,y:1,w:8,h:4,roof:'#57277f',wall:'#2a1442',trim:'#ff4fd8',sign:'CJI',stage:3},
  {id:'ibjjf',name:'IBJJF WORLDS',x:2,y:8,w:7,h:4,roof:'#123a86',wall:'#dfe6f4',trim:'#123a86',sign:'IBJJF',stage:1},
  {id:'adcc',name:'ADCC TRIALS',x:15,y:8,w:7,h:4,roof:'#14151f',wall:'#3a3320',trim:'#f6c744',sign:'ADCC',stage:2},
@@ -1078,7 +1093,7 @@ let MAPT=null;
 function buildMap(){const rnd=(a=>()=>(a=(a*16807)%2147483647)/2147483647)(42),g=[];
   for(let y=0;y<MH;y++){g.push([]);for(let x=0;x<MW;x++)g[y].push(x===0||y===0||x===MW-1||y===MH-1?'T':'.')}
   const path=(x0,y0,x1,y1)=>{for(let y=Math.min(y0,y1);y<=Math.max(y0,y1);y++)for(let x=Math.min(x0,x1);x<=Math.max(x0,x1);x++)g[y][x]='='};
-  path(12,5,12,23);path(11,21,13,23);path(5,12,18,12);path(5,20,17,20);
+  path(12,5,12,23);path(11,21,13,23);path(5,12,18,12);path(5,20,17,20);path(12,23,12,34);path(6,32,28,32);path(28,21,28,32);path(17,21,28,21);
   for(const v of VENUES){path(v.dx,v.dy+1,v.dx,v.dy+1);for(let y=v.y;y<v.y+v.h;y++)for(let x=v.x;x<v.x+v.w;x++)g[y][x]='B';g[v.dy][v.dx]='D'}
   for(let y=21;y<=23;y++)for(let x=18;x<=21;x++)g[y][x]='~';
   for(let y=1;y<MH-1;y++)for(let x=1;x<MW-1;x++)if(g[y][x]==='.'){const nearPath=[[0,1],[0,-1],[1,0],[-1,0]].some(([a,b])=>'=D'.includes(g[y+b][x+a]));
@@ -1135,7 +1150,7 @@ addEventListener('keyup',e=>{if(KEYS[e.key]===held)held=null});
 
 /* ---- sedes ---- */
 function leaveVenue(v){me.y=v.dy+1;me.x=v.dx;me.px=me.x*TS;me.py=me.y*TS;me.dir='down';openMap()}
-function enterVenue(v){const pr=progress(),T=v.stage!==null?CIRCUIT[v.stage]:null;
+function enterVenue(v){if(v.id==='shop'){openShop(v);return}const pr=progress(),T=v.stage!==null?CIRCUIT[v.stage]:null;
   if(T&&!canEnter(v.stage)){const need=CIRCUIT.find((t,i)=>i<v.stage&&!pr.medals.includes(t.id));me.y++;me.py=me.y*TS;me.dir='down';mapSay([`${v.name} está cerrado para ti.`,`Primero gana ${need.name}.`]);return}
   show('s-venue');Snd.ok();$('#vTitle').textContent=v.name;const bg=T?T.bg:v.id==='garage'?'garage':'dojo',vc=$('#vCv');
   drawScene(vc.getContext('2d'),{pos:'STANDING',p:{},e:{}},mapPal(),ROSTER[T?T.fights[T.fights.length-1]:'spaz'].pal,0,{},{bg});
@@ -1147,6 +1162,33 @@ function enterVenue(v){const pr=progress(),T=v.stage!==null?CIRCUIT[v.stage]:nul
   if(v.rivals){$('#vDesc').innerHTML='<b>Entrena con los especialistas de este dojo.</b><br><span class="sm">Rivales propios, experiencia por cada combate y nuevas técnicas para descubrir.</span>';
     add('SPARRING LIBRE','red',()=>{circuit=null;sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,fromMap:v};renderSelect()})}
   add('SALIR AL MAPA','dark',()=>leaveVenue(v))}
+
+
+/* ---- Puros Broncas: economía PvE, créditos separados de XP ---- */
+const SHOP=[
+ {id:'gi_moss',name:'KIMONO MUSGO',cost:120,desc:'Kimono verde bosque. Se equipa en tu personaje.',look:{gi:true,rash:'#3f7562'}},
+ {id:'gi_sunset',name:'KIMONO ATARDECER',cost:180,desc:'Kimono terracota para destacar en el tatami.',look:{gi:true,rash:'#c27656'}},
+ {id:'hair_silver',name:'PELO PLATA',cost:100,desc:'Cabello plateado, corte corto.',look:{hair:'#cad7da',hairStyle:'short'}},
+ {id:'headband',name:'BANDA LIFESTYLE',cost:80,desc:'Una banda turquesa. Pura buena vibra.',look:{band:'#69c9b4'}},
+ {id:'conditioning',name:'ACONDICIONAMIENTO',cost:240,desc:'Mejora permanente: +6 de resistencia máxima en combate.'}
+];
+const BRONCAS={skin:'#d9a070',hair:'#31251f',style:'bald',mustache:'#31251f',top:'#3f7562',bot:'#243d3d',belt:'#e7bc67'};
+const BRONCAS_QUOTES=['Aquí se viene a fluir, carnal. Puro lifestyle.','¿Buscabas plantas mágicas? Tengo una albahaca que revive con agua. Lifestyle.','Tu mejor skin es llegar a entrenar. Pero este kimono también ayuda.','Sin broncas, sin prisa. Posición antes que sumisión, campeón.'];
+let shopVenue=null,shopBusy=false;
+function wallet(){const pr=progress();if(!pr.shop)pr.shop={spent:0,owned:[]};return pr.shop}
+function credits(){return Math.max(0,(account.profile.xp||0)-(wallet().spent||0))}
+function openShop(v){shopVenue=v;show('s-shop');Snd.theme('title');drawFace($('#shopFace').getContext('2d'),BRONCAS,'#385c58');$('#shopQuote').textContent=BRONCAS_QUOTES[Math.floor(Math.random()*BRONCAS_QUOTES.length)];$('#shopMsg').textContent='';renderShop()}
+function renderShop(){const w=wallet();$('#shopBalance').textContent=credits()+' CREDITOS · NIVEL '+(account.profile.level||1);const list=$('#shopItems');list.innerHTML='';
+  SHOP.forEach(item=>{const owned=w.owned.includes(item.id),b=document.createElement('button');b.className='btn '+(owned?'plum':'dark');b.disabled=shopBusy||(!owned&&credits()<item.cost)||(!myFighter&&!!item.look)||(owned&&!item.look);
+    b.innerHTML='<b>'+item.name+'</b><br><small>'+item.desc+'</small><br><small>'+(owned?(item.look?'ADQUIRIDO · EQUIPAR':'ACTIVO'):item.cost+' CREDITOS')+'</small>';b.onclick=()=>buyItem(item);list.appendChild(b)});
+  if(!myFighter)$('#shopMsg').textContent='Crea tu personaje desde el menú para equipar ropa y peinados.'}
+async function buyItem(item){if(shopBusy)return;const w=wallet(),owned=w.owned.includes(item.id);if(!owned&&credits()<item.cost)return;shopBusy=true;const previous=JSON.parse(JSON.stringify(w));renderShop();
+  try{if(!owned){w.spent+=item.cost;w.owned.push(item.id);await saveProgress();if(saveError){progress().shop=previous;throw Error(saveError)}}
+    if(item.look){const next={...myFighter,...item.look};if(account.mode==='live'){const{error}=await sb.from('fighters').update({rashguard_color:next.rash,short_color:next.short,look:{skin:next.skin,hair:next.hair,hairStyle:next.hairStyle,gi:!!next.gi,band:next.band||''}}).eq('id',next.id).eq('profile_id',account.uid);if(error)throw Error('Compra guardada; no se pudo equipar. Toca EQUIPAR para reintentar.')}
+      myFighter=next;store.set('bjjm_fighter',next)}
+    Snd.ok();$('#shopMsg').textContent=item.look?'Equipado. ¡Puro lifestyle!':'Mejora activa para tu próximo combate.';
+  }catch(e){$('#shopMsg').textContent=e.message}finally{shopBusy=false;renderShop()}}
+$('#shopBack').onclick=()=>leaveVenue(shopVenue);
 
 /* ==================== EXAMEN DE CINTA ==================== */
 const PADS=[['AGARRE','#e0483c',60],['CADERA','#3b7dd8',64],['PASE','#2fa86a',67],['FINALIZA','#c48a00',72]];
