@@ -205,6 +205,11 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
 @media(max-height:700px){.logo b{font-size:30px}.logo span{font-size:16px;margin-top:8px}#tip{min-height:24px;font-size:15px}#s-title .xs{font-size:14px}#titleCv{max-height:24vh}#welcome{font-size:16px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}#screen::after{background:none}}
 #logPanel{max-height:130px;overflow:auto;flex-shrink:0}#logPanel[hidden]{display:none}.battleTools .btn{min-height:30px;padding:3px;font-size:15px}.battleTools{flex-shrink:0}
+
+.battleTools{grid-template-columns:1fr 1fr 1fr}
+#specialFx{display:none;position:absolute;inset:18% 0 auto;min-height:92px;z-index:6;align-items:center;justify-content:center;gap:12px;padding:14px 10px;background:repeating-linear-gradient(-15deg,#141626 0 8px,#252a45 8px 10px);border-block:4px solid var(--special-color);box-shadow:0 0 30px var(--special-color);pointer-events:none}
+#specialFx.on{display:flex;animation:specialCut .65s steps(10) both}#specialFx canvas{width:60px;height:60px}#specialFx strong{max-width:65%;font:11px/1.8 'Press Start 2P',monospace;color:var(--special-color);text-shadow:2px 2px #000}
+@keyframes specialCut{0%{transform:translateX(-100%)}20%,80%{transform:translateX(0)}100%{transform:translateX(100%)}}
 </style>
 </head>
 <body>
@@ -245,12 +250,12 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
   <div class="stage" id="stage">
     <canvas id="cv" width="160" height="120" aria-hidden="true"></canvas>
     <div class="hudrow"><div class="box stat" id="stP"></div><div class="clock"><span id="clock">10:00</span><small id="turnLbl">TURNO 1/24</small></div><div class="box stat" id="stE"></div></div>
-    <div id="banner"></div><div id="floats"></div>
+    <div id="specialFx" aria-hidden="true"><canvas width="24" height="24"></canvas><strong></strong></div><div id="banner"></div><div id="floats"></div>
     <div class="poschip" id="posChip">DE PIE</div>
   </div>
   <div class="posbar" id="posbar"></div>
   <div class="box dialog" id="dlg" role="status" aria-live="polite"><span id="dlgText"></span><button class="next" tabindex="-1">CONTINUAR</button></div>
-  <div class="row battleTools"><button class="btn dark sm" id="battleSpeed">RITMO 1X</button><button class="btn dark sm" id="battleLog">HISTORIAL</button></div><div id="logPanel" class="box sm" hidden></div>
+  <div class="row battleTools"><button class="btn dark sm" id="battleSpeed">RITMO 1X</button><button class="btn dark sm" id="battleLog">HISTORIAL</button><button class="btn dark sm" id="battleTap">TAPEAR</button></div><div id="logPanel" class="box sm" hidden></div>
   <div class="menu root" id="menu"></div>
 </section>
 
@@ -600,13 +605,29 @@ function customFighter(f,beltCol){const st=STYLES[f.style]||STYLES.guardero,nm=U
     pal:{skin:f.skin||'#d9a070',hair:f.hair||'#2a1c14',style:f.hairStyle||'short',gi:gi?1:0,
       top:f.rash||'#e0483c',bot:gi?(f.rash||'#e0483c'):(f.short||'#14151f'),legs:gi?(f.rash||'#e0483c'):undefined,band:f.band||undefined,belt:beltCol||'#f4f4e4'}}}
 
+const SPECIAL_CHARGE=100;
+function specialFor(def){const set=def.sets[0],all=U.concat(...Object.values(SIG));
+  let id='armbar_m',name='CIERRE PERFECTO',color='#f6c744';
+  if(set==='judo'){id='uchi';name='TORMENTA DE KUZUSHI';color='#64c4e1'}
+  else if(set==='guard'||set==='closed'||set==='spider'){id='triangle';name='TRIANGULO DEL DESTINO';color='#5cceae'}
+  else if(set==='legs'){id='kneebar';name='CERROJO DE ACERO';color='#7ea3ef'}
+  else if(set==='deep'){id='deep_sweep';name='ABISMO PROFUNDO';color='#79b899'}
+  else if(def.name==='JOHNNY C'){id='smash_mount';name='SELLO DE LOS CARNALES';color='#f1be65'}
+  else if(def.name==='BLACK JOHNNY'){id='shadow_crank';name='ECLIPSE TOTAL';color='#cb8cff'}
+  else if(set==='bravado'){id='breathe';name='ULTIMO ALIENTO';color='#e8d18d'}
+  else if(set==='wrestle'){id='double';name='AVALANCHA';color='#e7a36d'}
+  else if(set==='lapel'||set==='oldschool'){id='loop';name='NUDO DEL MAESTRO';color='#f1bce7'}
+  else if(set==='bolo'){id='berimbolo';name='ESPIRAL INVERSA';color='#91b6ef'}
+  const base=all.find(m=>m.id===id);return{...base,id:'special_'+id,n:name,color,special:1,sig:0,chain:[],cost:base.rec?0:20,cd:0,
+    ...(base.rec?{rec:35}:{dmg:(base.dmg||5)+7}),...(base.sub?{sub:Math.min(27,base.sub+8)}:{}),...(base.to?{ch:Math.min(90,base.ch+15)}:{})};
+}
 function mkFighter(def){const maxSta=Math.round(50+def.stats.GAS*.6);
   return{name:def.name,sn:def.sn,stats:def.stats,pal:def.pal,hp:def.hp,maxHp:def.hp,sta:maxSta,maxSta,
-    tilt:0,def:0,lock:0,grip:0,cd:{},pts:0,adv:0,chain:null,moves:U.filter(m=>!def.basics||def.basics.includes(m.id)).concat(...def.sets.map(s=>SIG[s]))}}
+    charge:0,spentSpecial:false,tilt:0,def:0,lock:0,grip:0,cd:{},pts:0,adv:0,chain:null,moves:U.filter(m=>!def.basics||def.basics.includes(m.id)).concat(...def.sets.map(s=>SIG[s]),specialFor(def))}}
 function newMatch(pDef,eDef,options={}){return{underground:!!options.underground,p:mkFighter(pDef),e:mkFighter(eDef),pos:'STANDING',top:null,turn:0,over:null,bag:{electro:2,tape:1,acai:1}}}
 const roleOf=(S,w)=>S.pos==='STANDING'?'neutral':(S.top===w?'top':'bottom');
 const avail=(S,w,k)=>{const key=S.pos+':'+roleOf(S,w);return S[w].moves.filter(m=>(!m.forbidden||S.underground)&&(!k||m.k===k)&&(m.from[0]==='*'||m.from.includes(key)))};
-const usable=(S,w,m)=>m.cost<=S[w].sta&&!(S[w].cd[m.id]>0);
+const usable=(S,w,m)=>(!m.special||S[w].charge>=SPECIAL_CHARGE)&&m.cost<=S[w].sta&&!(S[w].cd[m.id]>0);
 const chained=(S,w,m)=>!!(S[w].chain&&S[w].chain.includes(m.id));
 function posValue(pos,role,legl){if(role==='neutral')return 0;const v=POS_VAL[pos]+(pos==='ASHI'&&legl?3:0);return role==='top'?v:(pos==='GUARD'?0:pos==='HALF'?-1:-v)}
 function chance(S,w,m){const a=S[w],d=S[opp(w)],cb=chained(S,w,m)?(a.cbonus||CHAIN_BONUS):0;
@@ -616,15 +637,15 @@ function chance(S,w,m){const a=S[w],d=S[opp(w)],cb=chained(S,w,m)?(a.cbonus||CHA
     let c=m.ch+(a.stats[st]-d.stats[st])*.4+(1-d.sta/d.maxSta)*20-(1-a.sta/a.maxSta)*15+cb;
     if(m.esc&&a.lock>0)c-=20;if(a.grip>0)c+=10;return Math.round(clamp(c,10,95))}
   return 100}
-function snap(S){const f=x=>({sn:x.sn,hp:x.hp,maxHp:x.maxHp,sta:x.sta,maxSta:x.maxSta,tilt:x.tilt,def:x.def,lock:x.lock,grip:x.grip,pts:x.pts,adv:x.adv});
+function snap(S){const f=x=>({sn:x.sn,charge:x.charge,hp:x.hp,maxHp:x.maxHp,sta:x.sta,maxSta:x.maxSta,tilt:x.tilt,def:x.def,lock:x.lock,grip:x.grip,pts:x.pts,adv:x.adv});
   return{p:f(S.p),e:f(S.e),pos:S.pos,top:S.top,turn:S.turn}}
 function setPos(S,w,to){const[pos,role]=to.split(':');S.pos=pos;S.top=pos==='STANDING'?null:(role==='top'?w:opp(w));if(pos!=='BACK'&&pos!=='ASHI'){S.p.lock=0;S.e.lock=0}}
-function hurt(S,w,amt,ev,tech){const t=opp(w),d=S[t];const dmg=Math.max(1,Math.round(amt*(d.def>0?.7:1)));d.hp=Math.max(0,d.hp-dmg);ev.push({t:'dmg',who:t,amt:dmg});
+function hurt(S,w,amt,ev,tech){const t=opp(w),d=S[t];const dmg=Math.max(1,Math.round(amt*(d.def>0?.7:1)));const actual=Math.min(d.hp,dmg);d.hp=Math.max(0,d.hp-dmg);if(!S[w].spentSpecial)S[w].charge=Math.min(SPECIAL_CHARGE,S[w].charge+actual*2);ev.push({t:'dmg',who:t,amt:dmg});
   if(d.hp<=0&&!S.over)S.over={winner:w,by:'exhaust',tech}}
 
 function resolve(S,w,m,rng=Math.random){if(S.over||!m||!avail(S,w).includes(m)||!usable(S,w,m))return[];const ev=[],a=S[w],d=S[opp(w)];
   const say=text=>ev.push({t:'say',text}),sync=()=>ev.push({t:'sync',snap:snap(S)}),fx=n=>ev.push({t:'fx',n,who:w});
-  const c=chance(S,w,m),wasChain=chained(S,w,m);a.chain=null;
+  const c=chance(S,w,m),wasChain=chained(S,w,m);a.chain=null;a.spentSpecial=!!m.special;if(m.special){a.charge=0;ev.push({t:'special',who:w,text:m.n,color:m.color})}
   a.sta=Math.max(0,a.sta-m.cost);if(m.cd)a.cd[m.id]=m.cd;
   if(a.tilt>0&&!m.rec&&rng()<.3){say(`${a.sn} está en TILT… ¡pierde el timing de ${m.n}!`);sync();return ev}
   if(m.rec){a.sta=Math.min(a.maxSta,a.sta+m.rec);if(m.def)a.def=m.def+1;fx('breathe');
@@ -638,7 +659,7 @@ function resolve(S,w,m,rng=Math.random){if(S.over||!m||!avail(S,w).includes(m)||
     hurt(S,w,m.dmg*scale*(.85+rng()*.3),ev,m.n);d.sta=Math.max(0,d.sta-6);if(c>=30)a.adv++;if(m.failTo)setPos(S,w,m.failTo);fx('hit');sync();
     say(S.over?`${d.sn} ya no puede más y se rinde verbalmente.`:`¡${d.sn} defiende! Pero le cuesta caro.`+(m.failTo?` ${a.sn} cae a ${POS[S.pos].n}.`:''));return ev}
   if(m.to){say(`${a.sn} busca ${m.n}${m.sig?'!':'.'}`);
-    if(rng()*100<c){setPos(S,w,m.to);a.chain=(m.chain||[]).filter(id=>avail(S,w).some(next=>next.id===id));if(m.pts)a.pts+=m.pts;if(m.dmg)hurt(S,w,m.dmg*scale,ev,m.n);fx(m.fx||'move');sync();
+    if(rng()*100<c){setPos(S,w,m.to);if(!m.special)a.charge=Math.min(SPECIAL_CHARGE,a.charge+12);a.chain=(m.chain||[]).filter(id=>avail(S,w).some(next=>next.id===id));if(m.pts)a.pts+=m.pts;if(m.dmg)hurt(S,w,m.dmg*scale,ev,m.n);fx(m.fx||'move');sync();
       say(S.over?`¡Impacto total! ${d.sn} no puede continuar.`:`¡Lo consigue! ${POS[S.pos].n}${m.pts?` (+${m.pts} pts)`:''}.`)}
     else{a.sta=Math.max(0,a.sta-4);sync();say(`${d.sn} lo neutraliza.`)}
     return ev}
@@ -674,7 +695,7 @@ function aiPick(S,w,noise=26,rng=Math.random){const a=S[w],d=S[opp(w)],legl=a.mo
     else if(m.tilt)s=(d.tilt>0||d.sta<25)?-50:40;
     else if(m.rec)s=a.sta<22?70:(m.def&&cur<=-4&&a.def<=0?18:2);
     else s=14+(m.dmg||0)*1.2+(m.drain||0)*.5+(m.lock&&d.lock<=0?12:0);
-    s+=rng()*noise;if(s>bs){bs=s;best=m}}
+    if(m.special)s+=30;s+=rng()*noise;if(s>bs){bs=s;best=m}}
   return best||a.moves.find(m=>m.id==='breathe')}
 const BELT_AT=[[1400,'negro'],[800,'marron'],[400,'morado'],[150,'azul'],[0,'blanco']];
 const beltFor=lp=>BELT_AT.find(b=>lp>=b[0])[1];
@@ -960,6 +981,7 @@ let autoText=store.get('bjjm_auto',true),battleSpeed=[1,2,3].includes(store.get(
 let battleHistory=[];
 function refreshSpeed(){$('#battleSpeed').textContent='RITMO '+battleSpeed+'X'}
 $('#battleSpeed').onclick=()=>{battleSpeed=battleSpeed===3?1:battleSpeed+1;store.set('bjjm_speed',battleSpeed);refreshSpeed();tapNow()};refreshSpeed();
+$('#battleTap').onclick=()=>{if(!busy&&!S?.over)menu('tap')};
 $('#battleLog').onclick=()=>{const p=$('#logPanel');p.hidden=!p.hidden;p.textContent=battleHistory.slice(-12).join(' · ')};
 function setAuto(v){autoText=v;store.set('bjjm_auto',v);$('#auto').classList.toggle('on',v);$('#auto').textContent=v?'AUTO':'TAP'}
 $('#auto').onclick=()=>setAuto(!autoText);setAuto(autoText);
@@ -988,7 +1010,7 @@ document.addEventListener('click',e=>{if(e.target.closest('.next')){e.stopPropag
 function hud(){const v=view;if(!v)return;const col=p=>p>.5?'var(--green)':p>.22?'var(--gold)':'var(--red)';
   const box=f=>{const hp=f.hp/f.maxHp,st=f.sta/f.maxSta;const chips=[f.tilt>0&&['TILT',1],f.lock>0&&['ATRAPADO',1],f.def>0&&['DEFENSA',0],f.grip>0&&['AGARRE+',0]].filter(Boolean).map(([t,b])=>`<span class="chip${b?' bad':''}">${t}</span>`).join('');
     return`<div class="nm"><span>${esc(f.sn)}</span><span>${f.pts}P ${f.adv||0}V</span></div><div class="meter"><span>HP</span><div class="bar"><i style="width:${hp*100}%;background:${col(hp)}"></i></div></div>
-     <div class="meter"><span>STA</span><div class="bar"><i style="width:${st*100}%;background:var(--sta)"></i></div></div><div class="chips">${chips}</div>`};
+     <div class="meter"><span>STA</span><div class="bar"><i style="width:${st*100}%;background:var(--sta)"></i></div></div><div class="meter"><span>ESP</span><div class="bar"><i style="width:${f.charge||0}%;background:var(--gold)"></i></div><small>${f.charge||0}%</small></div><div class="chips">${chips}</div>`};
   $('#stP').innerHTML=box(v.p);$('#stE').innerHTML=box(v.e);$('#clock').textContent=clockStr(v);$('#turnLbl').textContent='TURNO '+Math.min(MAX_TURNS,v.turn+1)+'/'+MAX_TURNS;$('#clock').parentElement.classList.toggle('low',v.turn>=MAX_TURNS-5);
   const who=v.top===null?'':v.top==='p'?'me':'foe';$('#posbar').innerHTML=POS_ORDER.map(k=>`<span class="${k===v.pos?'cur '+who:''}">${POS[k].s}</span>`).join('');
   const chip=$('#posChip');chip.textContent=POS[v.pos].n+(v.top===null?'':v.top==='p'?' · DOMINAS':' · TE DOMINAN');chip.style.color=v.top==='p'?'var(--green)':v.top==='e'?'#ff8a80':'var(--gold)'}
@@ -1002,14 +1024,15 @@ async function doFx(e){const n=e.n,sign=e.who==='p'?1:-1,tgt=opp(e.who);
   else if(n==='tapout'){fxs.flash=6;fxs.shake=10;haptic([60,50,60,50,60,50,420]);Snd.thump();await sleep(420)}
   else if(n==='talk'){haptic([15,40,15,40,15,40,15]);Snd.talk();await sleep(260)}
   else if(n==='breathe'){Snd.heal();await sleep(160)}}
-async function playEvents(ev){for(const e of ev){if(e.t==='say')await say(e.text);else if(e.t==='sync'){view=e.snap;hud()}else if(e.t==='dmg')floatNum(e.who,e.amt);
+async function playSpecial(e){const panel=$('#specialFx');panel.style.setProperty('--special-color',e.color);panel.querySelector('strong').textContent=e.text;drawFace(panel.querySelector('canvas').getContext('2d'),e.who==='p'?PP:EP,e.color);panel.classList.remove('on');void panel.offsetWidth;panel.classList.add('on');Snd.sigfx();haptic([40,30,80]);await sleep(650);panel.classList.remove('on')}
+async function playEvents(ev){for(const e of ev){if(e.t==='special')await playSpecial(e);else if(e.t==='say')await say(e.text);else if(e.t==='sync'){view=e.snap;hud()}else if(e.t==='dmg')floatNum(e.who,e.amt);
   else if(e.t==='banner'){const b=$('#banner');b.textContent='\u00a1'+UP(e.text)+'!';b.classList.remove('on');void b.offsetWidth;b.classList.add('on');Snd.sigfx();await sleep(520)}else await doFx(e)}}
 function menu(mode){const m=$('#menu');m.className='menu '+(mode==='root'?'root':'list');m.innerHTML='';m.scrollTop=0;
   const add=(html,cls,fn,dis)=>{const b=document.createElement('button');b.className='btn '+cls;b.innerHTML=html;b.disabled=!!dis;b.onclick=fn;m.appendChild(b);return b};
-  if(mode==='wait')return;
-  if(mode==='root'){add('TECNICA<small>ataca y finaliza</small>','red',()=>menu('tec'));add('POSICION<small>pasa, barre, escapa</small>','',()=>menu('pos'));add('MOCHILA<small>açaí y compañía</small>','',()=>menu('bag'));add('TAPEAR<small>rendición táctica</small>','dark',()=>menu('tap'));return}
+  $('#battleTap').disabled=busy;if(mode==='wait')return;
+  if(mode==='root'){add('TECNICA<small>ataca y finaliza</small>','red',()=>menu('tec'));add('POSICION<small>pasa, barre, escapa</small>','',()=>menu('pos'));add('MOCHILA<small>açaí y compañía</small>','',()=>menu('bag'));const special=S.p.moves.find(x=>x.special),legal=avail(S,'p').includes(special),ready=legal&&usable(S,'p',special);add('ESPECIAL<small>'+S.p.charge+'/100 · '+(ready?special.n:!legal?'Prepara: '+special.from.map(x=>POS[x.split(':')[0]]?.s||'CUALQUIERA').join('/'):'Carga al desgastar al rival')+'</small>','gold',()=>turn({move:special}),!ready);return}
   add('VOLVER','dark back',()=>{menu('root');prompt_()});
-  if(mode==='tec'||mode==='pos'){const list=avail(S,'p',mode).sort((a,b)=>chained(S,'p',b)-chained(S,'p',a)||(b.sig||0)-(a.sig||0));
+  if(mode==='tec'||mode==='pos'){const list=avail(S,'p',mode).filter(x=>!x.special).sort((a,b)=>chained(S,'p',b)-chained(S,'p',a)||(b.sig||0)-(a.sig||0));
     list.forEach(mv=>{const c=chance(S,'p',mv),cd=S.p.cd[mv.id]>0,chn=chained(S,'p',mv);
       const meta=mv.sub?`SUMISION ${c}%`:mv.to?`${POS[mv.to.split(':')[0]].s} ${c}%`:mv.rec?`+${mv.rec} STA`:mv.tilt?'CAUSA TILT':`DANO ${mv.dmg}`;
       add(`<b>${esc(mv.n)}</b><small>${chn?'CADENA +'+CHAIN_BONUS+' · ':''}${meta} · ${cd?'ESPERA '+S.p.cd[mv.id]+'T':'STA '+mv.cost}</small>`,'mv '+(mv.sub?'sub':mv.to?'pos':'')+(mv.sig?' sig':'')+(chn?' chain':''),()=>turn({move:mv}),!usable(S,'p',mv))})}
@@ -1033,7 +1056,7 @@ async function startBattle(def,foe,foeKey,bgOverride){battleHistory=[];$('#logPa
   Snd.theme(foe.theme||'battle');const first=!store.get('bjjm_trial',false);
   await say(foe.boss?`¡${foe.name} «${foe.tag}» sube al tatami!`:`¡${foe.name} acepta el combate!`);
   if(first){await say('Diez minutos. Ganas por sumisión o por puntos.');
-    await say('Mejora tu POSICIÓN antes de finalizar: Montada y Espalda dan +40% a las sumisiones.'.replace('ÓN','ON'));
+    await say('El especial se carga desgastando al rival. Mejora tu POSICIÓN antes de finalizar: Montada y Espalda dan +40% a las sumisiones.'.replace('ÓN','ON'));
     await say('Toca el cuadro de texto para avanzar el diálogo. El botón AUTO lo pasa solo.')}
   else await say('¡Combate! Diez minutos, sumisión o puntos.');busy=false;menu('root');prompt_()}
 async function endBattle(){busy=true;menu('wait');Snd.stop();Snd.cur=null;const o=S.over,won=o.winner==='p';view=snap(S);hud();

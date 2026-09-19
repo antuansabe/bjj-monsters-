@@ -2,6 +2,8 @@
    Uso: node tools/sim.js [combates_por_cruce]                                  */
 require('./regression.js');
 require('./campaign-test.js');
+require('./special-test.js');
+require('./campaign-balance.js');
 const fs=require('fs'),path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const eng=html.slice(html.indexOf('/*ENGINE-START'),html.indexOf('/*ENGINE-END*/'));
