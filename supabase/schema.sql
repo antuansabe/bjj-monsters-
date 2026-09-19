@@ -5,7 +5,7 @@
 --   1) El cliente NUNCA escribe elo/lp/wins/level: solo columnas cosméticas.
 --   2) Los combates se registran vía RPC (security definer) con rate-limit.
 --   3) PvE mueve LP, XP y cinturon. El ELO queda reservado a PvP (Fase 2, server-authoritative).
---   4) El cinturon se calcula desde LP en el servidor: el cliente no puede auto-graduarse.
+--   4) El cinturon se gana con examen: promote_belt() valida los LP en el servidor y sube un grado.
 -- ============================================================
 
 create type public.belt_rank    as enum ('blanco','azul','morado','marron','negro');
@@ -187,7 +187,6 @@ begin
     lp     = greatest(0, p.lp + lp_d),
     xp     = p.xp + xp_d,
     level  = 1 + (p.xp + xp_d) / 200,
-    belt   = public.belt_for_lp(greatest(0, p.lp + lp_d)),
     wins   = p.wins   + (case when p_won then 1 else 0 end),
     losses = p.losses + (case when p_won then 0 else 1 end)
   where p.id = uid
@@ -208,3 +207,41 @@ grant select on public.leaderboard to anon, authenticated;
 
 -- Fase 2 (PvP): el lobby usa Realtime Presence/Broadcast (no requiere tablas).
 -- La resolución de turnos debe vivir en una Edge Function con el mismo motor (bloque ENGINE de index.html).
+
+-- ============================================================
+-- Examen de cinta, nombres unicos y salon de la fama
+-- ============================================================
+-- 1) Cada personaje creado es unico en todo el juego
+create unique index fighters_name_unique_idx on public.fighters (lower(name));
+
+-- 2) El cinturon se gana con examen. El servidor valida los LP y sube un solo grado por examen.
+create or replace function public.promote_belt()
+returns public.profiles
+language plpgsql security definer set search_path = '' as $$
+declare
+  uid  uuid := (select auth.uid());
+  prof public.profiles;
+  nb   public.belt_rank;
+begin
+  if uid is null then raise exception 'not authenticated'; end if;
+  select * into prof from public.profiles where id = uid;
+  nb := case prof.belt when 'blanco' then 'azul' when 'azul' then 'morado'
+                       when 'morado' then 'marron' when 'marron' then 'negro' end;
+  if nb is null then raise exception 'ya eres cinta negra'; end if;
+  if public.belt_for_lp(prof.lp) < nb then raise exception 'LP insuficientes para cinta %', nb; end if;
+  update public.profiles set belt = nb where id = uid returning * into prof;
+  return prof;
+end $$;
+revoke execute on function public.promote_belt() from public, anon;
+grant  execute on function public.promote_belt() to authenticated;
+
+-- 3) Salon de la fama: el luchador de quien termina el circuito se vuelve rival para todos
+create view public.legends with (security_invoker = true) as
+  select f.name, f.style, f.rashguard_color, f.short_color, f.look, p.username, p.belt
+  from public.fighters f
+  join public.profiles p on p.id = f.profile_id
+  where f.is_active
+    and jsonb_typeof(p.progress -> 'medals') = 'array'
+    and jsonb_array_length(p.progress -> 'medals') >= 4;
+grant select on public.legends to anon, authenticated;
+

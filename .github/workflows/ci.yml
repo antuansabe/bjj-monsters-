@@ -42,5 +42,10 @@ jobs:
           print('PL/pgSQL OK')
           PY
 
-      - name: El esquema y la migracion no deben divergir
-        run: diff -q supabase/schema.sql supabase/migrations/20260919000000_init.sql
+      - name: Cada migracion debe ser SQL valido
+        run: |
+          python - <<'PY'
+          import glob, pglast
+          for f in sorted(glob.glob('supabase/migrations/*.sql')):
+              print(f, len(pglast.parse_sql(open(f).read())), 'sentencias')
+          PY

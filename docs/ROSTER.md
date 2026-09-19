@@ -19,6 +19,10 @@ chelo:{
 }
 ```
 
+## Sobre los nombres
+Los nombres actuales son guiños que la gente del jiu-jitsu reconoce, no nombres reales.
+Se evitó cualquier apodo que se burle del físico de alguien: un guiño es un homenaje, no un insulto.
+
 ## Cambiar un nombre
 Edita `name`, `sn` y `tag`. No toques la llave del objeto (`chelo:`), porque `PLAYABLE`,
 `CIRCUIT` y los guardados apuntan a esa llave.

@@ -1,67 +1,140 @@
-# BJJ Monsters
+<div align="center">
 
-RPG por turnos de Brazilian Jiu-Jitsu en pixel art, pensado para el teléfono. Sitio estático,
-sin build: `index.html` lleva motor, gráficos, audio y UI.
+# 🥋 BJJ Monsters
 
+**Un RPG táctico de Brazilian Jiu-Jitsu en pixel art, hecho para jugarse en el teléfono.**
 
-## Correr en local
-```bash
-python3 -m http.server 8000     # y abre http://localhost:8000
-```
-Sin llaves de Supabase arranca en **modo demo**: el juego completo funciona con guardado local.
+[![Jugar ahora](https://img.shields.io/badge/▶_JUGAR_AHORA-bjj--monsters.vercel.app-e0483c?style=for-the-badge)](https://bjj-monsters.vercel.app)
 
-## Desplegar
-1. **Supabase**: proyecto nuevo → SQL Editor → pega `supabase/schema.sql` → Run.
-2. **Llaves**: Settings → API. Copia `Project URL` y `anon public key` al bloque `CONFIG`,
-   al inicio del `<script>` de `index.html`.
-3. **Auth**: Authentication → URL Configuration → agrega tu dominio. Para probar rápido,
-   desactiva "Confirm email".
-4. **Vercel**: `vercel --prod` en esta carpeta. Sin framework, sin build command.
+![CI](https://github.com/antuansabe/bjj-monsters-/actions/workflows/ci.yml/badge.svg)
+![Sin dependencias](https://img.shields.io/badge/dependencias-0-4fc26b)
+![Sin build](https://img.shields.io/badge/build-ninguno-3b7dd8)
+![Assets](https://img.shields.io/badge/imágenes_y_audio-100%25_procedural-f6c744)
+![Licencia](https://img.shields.io/badge/licencia-MIT-8b93ad)
 
-## Qué tiene
-- **12 luchadores jugables** con retrato, stats, técnicas firma y frases propias, más dos
-  personajes especiales: el campeón del circuito y El Espazado (el cinturón blanco de dos semanas).
-- **8 posiciones**: de pie, tortuga, guardia, media, lateral, montada, espalda y ashi garami.
-  Las sumisiones dependen de la posición (montada y espalda dan +40 %).
-- **Cadenas reales de técnicas**: armbar → triángulo → omoplata, kimura → hip bump,
-  D'Arce → anaconda, ankle → toe hold → heel hook, mission control → gogoplata.
-  Encadenar da +12 % y el menú lo marca en amarillo.
-- **Modo aventura**: cuatro torneos encadenados (Copa Academia, IBJJF Worlds, ADCC Trials,
-  CJI Invitational). Si pierdes una ronda, el torneo se reinicia. Entre rondas recuperas vida
-  parcial. Cada torneo da medalla y LP.
-- **Cinco sedes** dibujadas a mano en píxeles, con público animado.
-- **Cuatro temas de música** chiptune sintetizados en Web Audio, sin archivos de audio. La música
-  cambia sola a un tema más tenso cuando alguien baja de 34 % de vida o quedan menos de dos minutos.
-- **Creador de personaje**: nombre, estilo, uniforme (con o sin kimono), tono de piel, corte y
-  color de pelo, colores de ropa y banda en la cabeza.
-- **Cinturón que sube** por LP, calculado en el servidor.
-- **Diálogos con toque para avanzar** (o botón AUTO), hápticos, números de daño y banners de
-  técnica firma.
+![Mapa, combate, examen de cinta y selección de luchador](docs/img/banner.png)
 
-## Estructura
-| Ruta | Qué es |
+</div>
+
+---
+
+## De qué va
+
+Recorres un pueblo, entras a academias y torneos, y peleas por turnos. La diferencia con
+cualquier RPG es que aquí **no gana quien pega más, gana quien domina la posición**, igual que
+en el tatami: una sumisión desde la montada o la espalda vale 40 % más que desde la guardia, y
+encadenar técnicas reales (armbar → triángulo → omoplata) abre huecos que un ataque suelto no.
+
+Subes de cinta presentando un examen de coordinación frente al profe. Si lo repruebas tres
+veces, te manda a acumular tatami antes de volver.
+
+## Lo que tiene
+
+| | |
 |---|---|
-| `index.html` | El juego completo. Bloques marcados: `CONFIG`, `ENGINE`, `GFX`, y la UI. |
-| `supabase/schema.sql` | Tablas, RLS, triggers y la función que registra combates. |
-| `tools/sim.js` | Simulador de balance: juega miles de combates y reporta porcentajes. |
-| `docs/ROSTER.md` | Cómo editar personajes, técnicas, sedes y torneos. |
+| 🗺️ **Mundo caminable** | Un pueblo con academia, garaje de open mat y tres sedes de torneo. Cruceta táctil, vecinos con los que hablar y puertas que se abren conforme ganas medallas. |
+| ⚔️ **Combate posicional** | 8 posiciones, 115 técnicas reales, puntos y ventajas como en un torneo, estamina, y cadenas que premian pensar dos turnos adelante. |
+| 🥋 **Progreso de verdad** | Experiencia por combate, niveles que dan vida, y cintas que se ganan con examen y desbloquean objetos y mejores cadenas. |
+| 👥 **12 luchadores + tu personaje** | Cada uno con su juego: mariposa, berimbolo, solapas, rubber guard, presión, llaves de pierna. El tuyo es único en todo el juego. |
+| 🏆 **Salón de la fama** | Quien termina el circuito convierte a su personaje en rival para todos los demás. |
+| 🎵 **Música que reacciona** | Cuatro temas chiptune; el combate cambia a un tema tenso cuando alguien está contra las cuerdas. |
 
-El bloque `ENGINE-START … ENGINE-END` no toca el DOM. Es el que se mueve tal cual a una Edge
-Function cuando llegue el PvP en tiempo real.
+## Decisiones de ingeniería
 
-## Balance
-`node tools/sim.js` juega miles de combates por cruce. Hoy, contra el campeón del circuito, un
-jugador óptimo gana entre 32 % y 59 % según el personaje; apretando botones al azar, 11–21 %.
+Este proyecto es también un ejercicio deliberado de restricciones. Las que más definieron el resultado:
 
-## Pendiente
-- Arena global PvP con Supabase Realtime (el motor ya está listo para moverse al servidor).
-- Más rondas y rivales por torneo.
+**Cero dependencias, cero build, cero assets.** Todo el juego es un `index.html` de ~130 KB.
+Los sprites, los retratos, los cinco escenarios y el mapa se dibujan con rectángulos sobre
+`<canvas>`; la música y los efectos se sintetizan en Web Audio. No hay una sola imagen ni un
+archivo de audio. Carga instantánea en una red móvil mala, y nada que se rompa con una
+actualización de npm.
+
+**El motor de combate no conoce el navegador.** El bloque `ENGINE` es JavaScript puro: recibe
+un estado, devuelve eventos. Eso permite tres cosas: simular miles de combates en Node para
+balancear, probarlo sin DOM, y moverlo tal cual a una Edge Function cuando llegue el PvP con
+resolución en el servidor.
+
+**El balance se mide, no se intuye.** `tools/sim.js` juega miles de combates por cruce y la CI
+lo corre en cada push. Hoy, contra el jefe final, un jugador óptimo gana entre 32 % y 60 %
+según el personaje; uno que aprieta botones al azar, entre 11 % y 21 %.
+
+**El jugador es el atacante.** En un juego con ranking, quien hace trampa es el propio usuario
+desde su consola. Por eso el navegador no puede escribir sus puntos, su nivel ni su cinta: los
+combates pasan por una función de Postgres con rate-limit, y el examen de cinta se valida en el
+servidor contra los puntos reales. Todo está probado contra la base de producción, con
+intentos de trampa incluidos. Detalle en [`docs/SECURITY.md`](docs/SECURITY.md).
+
+**Falla con gracia.** Si Supabase o la CDN no responden, el juego sigue completo en modo local
+en vez de colgarse en el registro.
+
+## Arquitectura
+
+```mermaid
+flowchart LR
+    subgraph Navegador["📱 Navegador · index.html"]
+        UI["Interfaz, mapa y audio"]
+        GFX["GFX · pixel art procedural"]
+        ENG["ENGINE · motor táctico sin DOM"]
+        UI --> ENG
+        UI --> GFX
+    end
+    subgraph Supabase["🟢 Supabase"]
+        AUTH["Auth"]
+        RPC["record_pve_match()<br/>promote_belt()"]
+        DB[("Postgres + RLS<br/>profiles · fighters · matches")]
+        RPC --> DB
+    end
+    UI -- "llave publicable" --> AUTH
+    UI -- "resultado del combate" --> RPC
+    DB -- "ranking · leyendas" --> UI
+    SIM["🧪 tools/sim.js + CI"] -. "importa" .-> ENG
+    GH["GitHub"] -- "push" --> VERCEL["▲ Vercel"] --> Navegador
+```
+
+## Stack
+
+`JavaScript` sin frameworks · `Canvas 2D` · `Web Audio API` · `PWA` (service worker + manifest) ·
+`Supabase` (Postgres, Auth, Row Level Security, funciones `security definer`) · `Vercel` con
+cabeceras CSP y HSTS · `GitHub Actions`.
+
+## Correrlo
+
+```bash
+git clone https://github.com/antuansabe/bjj-monsters-.git
+cd bjj-monsters-
+python3 -m http.server 8000     # http://localhost:8000
+```
+
+No hay `npm install`. Para revisar el balance: `node tools/sim.js 1000`.
+
+## Mapa del repo
+
+```
+index.html              El juego. Bloques: CONFIG · ENGINE · GFX · interfaz, mapa y examen
+supabase/schema.sql     Instantánea del esquema: tablas, RLS, triggers y funciones
+supabase/migrations/    Cambios en orden, listos para `supabase db push`
+tools/sim.js            Simulador de balance
+docs/                   ROSTER · DEPLOY · SECURITY
+.github/workflows/      CI: sintaxis, balance y SQL
+```
+
+## Lo que sigue
+
+- [ ] Arena PvP en tiempo real, con el motor corriendo en una Edge Function
+- [ ] Más pueblos en el mapa y rivales que te retan al caminar
+- [ ] Técnicas que se desbloquean por cinta
 
 ## Notas
-- Los personajes son originales. Las técnicas y las secuencias sí son reales.
-- iOS no soporta `navigator.vibrate`: los hápticos solo se sienten en Android.
-- La tipografía Press Start 2P no trae mayúsculas acentuadas; por eso los rótulos en caja alta
-  van sin acento. El texto corrido usa Pixelify Sans, que sí las tiene.
 
-## Licencia
-MIT. Ver `LICENSE`.
+Los personajes son ficticios y sus nombres son guiños cariñosos a la cultura del jiu-jitsu.
+Las técnicas, las posiciones y las secuencias sí son reales.
+En iOS no hay vibración: Safari no soporta `navigator.vibrate`.
+
+---
+
+<div align="center">
+
+Hecho con ♥ en Ciudad de México por **[Antonio Fernández Dromundo](https://github.com/antuansabe)**
+<br/>Senior AI Engineer · cinta que sigue presentando exámenes
+
+</div>

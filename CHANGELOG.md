@@ -2,6 +2,23 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.4.0] — 2026-09-19
+### Añadido
+- Mundo caminable para el modo aventura: pueblo con academia, garaje y tres sedes de torneo, cruceta táctil y vecinos con diálogo.
+- Examen de cinta: minijuego de combos con tres intentos; al reprobar hay que ganar tres combates para volver.
+- Progreso: los niveles dan vida y cada cinta desbloquea objetos y mejores cadenas.
+- Ventajas de BJJ como criterio de desempate, y contador de turno en el reloj.
+- Salón de la fama: el personaje de quien termina el circuito se vuelve rival para todos.
+- Nombres de personaje únicos en todo el juego.
+- README con capturas reales y diagrama de arquitectura.
+
+### Cambiado
+- Tipografía de lectura: Jersey 15. En Pixelify Sans la C, la O y el 0 se confundían.
+- Los diálogos avanzan con un botón CONTINUAR visible en vez de una flecha parpadeante.
+- El cinturón ya no sube solo con los LP: se gana con el examen, validado en el servidor.
+- El correo de confirmación regresa al juego e inicia sesión solo.
+- Pie de página con créditos.
+
 ## [0.3.0] — 2026-09-19
 ### Añadido
 - Modo aventura: cuatro torneos encadenados con medallas y progreso guardado.

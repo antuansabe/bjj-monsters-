@@ -2,7 +2,7 @@
 
 ## Cómo está montado hoy
 ```
-GitHub (antuansabe/bjj-monsters-)  --push-->  Vercel  -->  bjj-monsters.vercel.app
+GitHub (antuansabe/bjj-monsters-)  --push-->  Vercel  -->  https://bjj-monsters.vercel.app
                                                   |
                                                   v
                                    Supabase (proyecto bjj-monsters, us-east-2)
@@ -20,12 +20,20 @@ No hay build: Vercel sirve los archivos tal cual. Cada `git push` a `main` publi
 El esquema ya está aplicado. Para reproducirlo en otro proyecto: pega `supabase/schema.sql`
 en el SQL Editor, o usa `supabase db push` con la migración de `supabase/migrations/`.
 
-### Un paso manual pendiente
-En **Authentication → URL Configuration**, agrega el dominio de Vercel a *Site URL* y a
-*Redirect URLs*. Sin eso, los correos de confirmación apuntan a `localhost`.
+### Configuración de Auth (obligatoria)
+Sin esto, el enlace del correo de confirmación manda a `localhost:3000`, que es el valor por
+defecto de Supabase. La cuenta sí se confirma, pero la persona aterriza en una página rota.
 
-Para que el registro sea inmediato durante las pruebas, desactiva *Confirm email* en
-**Authentication → Providers → Email**. Actívalo antes de abrirlo al público.
+[Authentication → URL Configuration](https://supabase.com/dashboard/project/gxhchitndagpfzjmaeiy/auth/url-configuration):
+
+| Campo | Valor |
+|---|---|
+| Site URL | `https://bjj-monsters.vercel.app` |
+| Redirect URLs | `https://bjj-monsters.vercel.app/**` y `http://localhost:8000/**` |
+
+El juego pide `emailRedirectTo` con su propio origen y, al volver del correo, detecta la sesión,
+limpia la URL y entra directo al menú. Supabase solo respeta ese destino si está en la lista
+de *Redirect URLs*.
 
 ## Vercel
 El proyecto está enlazado al repositorio, así que el despliegue es automático:
