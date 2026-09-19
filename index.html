@@ -388,7 +388,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const opp=w=>w==='p'?'e':'p';
 const MAX_TURNS=24,SEC_PER_TURN=25,CHAIN_BONUS=12;
 // Sedes del juego. Los nombres de torneo se editan aqui (ver docs/ROSTER.md).
-const ARENAS={dojo:{n:'ACADEMIA PORRADA',sub:'OPEN MAT DEL DOMINGO'},garage:{n:'GARAJE DE LA COLONIA',sub:'TATAMI PRESTADO'},
+const ARENAS={rooftop:{n:'AZOTEA DEL BARRIO',sub:'DEL TATAMI A LA CUMBRE'},carnales:{n:'DOS CARNALES DOJO',sub:'RESPETO, FAMILIA Y JIU-JITSU'},flow:{n:'JARDIN FLOW',sub:'RESPIRA, BARRE, FLUYE'},umbral:{n:'DOJO UMBRAL',sub:'CONTROL BAJO PRESION'},dojo:{n:'ACADEMIA HORIZONTE',sub:'OPEN MAT DEL DOMINGO'},garage:{n:'GARAJE DE LA COLONIA',sub:'TATAMI PRESTADO'},
   ibjjf:{n:'IBJJF WORLDS',sub:'CON KIMONO · PUNTOS Y VENTAJAS'},adcc:{n:'ADCC WORLD CHAMPIONSHIP',sub:'SIN KIMONO · EL MAS DURO'},cji:{n:'CJI INVITATIONAL',sub:'LAS VEGAS · REGLAS RPG'}};
 const POS_ORDER=['STANDING','TURTLE','GUARD','HALF','SIDE','MOUNT','BACK','ASHI'];
 const POS={STANDING:{n:'DE PIE',s:'PIE'},TURTLE:{n:'TORTUGA',s:'TOR'},GUARD:{n:'GUARDIA',s:'GUA'},HALF:{n:'MEDIA GUARDIA',s:'MED'},
@@ -573,10 +573,10 @@ const ROSTER={
  roman:{name:'PROFE ROMAN',sn:'PROFE',tag:'VIEJA ESCUELA',from:'MEX',bg:'dojo',spec:'Osoto gari, cruzada, loop choke y clock choke',stats:{SUB:86,PRE:82,GAS:74,VEL:64},hp:112,sets:['oldschool','heavy'],
    q:{intro:'«Llevo 25 años haciendo esto. Tú llevas dos.»',win:'«Eso se llama base, muchacho.»',lose:'«Ya no somos los de antes. Bien hecho.»'},
    pal:{skin:'#c98d5e',hair:'#b8b0a8',style:'short',beard:'#c8c0b8',top:'#3b7dd8',bot:'#3b7dd8',legs:'#3b7dd8',belt:'#14151f',gi:1,bulk:1}},
- vagabundo:{name:'VAGABUNDO BJJ',sn:'VAGABUNDO',tag:'EL REY DE LA MEDIA GUARDIA',from:'MEX',bg:'dojo',spec:'Media guardia profunda, barridos y estrangulaciones',stats:{SUB:85,PRE:64,GAS:90,VEL:62},hp:105,sets:['deep','oldschool'],
+ vagabundo:{name:'VAGABUNDO BJJ',sn:'VAGABUNDO',tag:'EL REY DE LA MEDIA GUARDIA',from:'MEX',bg:'carnales',spec:'Media guardia profunda, barridos y estrangulaciones',stats:{SUB:85,PRE:64,GAS:90,VEL:62},hp:105,sets:['deep','oldschool'],
    q:{intro:'«Desde abajo también se ve el camino.»',win:'«Te perdiste en mi media guardia.»',lose:'«Buen viaje, carnal. Nos vemos en el tatami.»'},
    pal:{skin:'#b07a4e',hair:'#352b22',style:'long',beard:'#352b22',top:'#62745a',bot:'#394333',belt:'#14151f',band:'#d1a568'}},
- johnny:{name:'JOHNNY C',sn:'JOHNNY C',tag:'JEFE DE DOS CARNALES',from:'MEX',boss:1,bg:'dojo',theme:'boss',spec:'Presión, pases y control de espalda',stats:{SUB:86,PRE:86,GAS:82,VEL:74},hp:114,sets:['pressure','wrestle'],
+ johnny:{name:'JOHNNY C',sn:'JOHNNY C',tag:'JEFE DE DOS CARNALES',from:'MEX',boss:1,bg:'carnales',theme:'boss',spec:'Presión, pases y control de espalda',stats:{SUB:86,PRE:86,GAS:82,VEL:74},hp:114,sets:['pressure','wrestle'],
    q:{intro:'«Aquí el respeto se gana rodando.»',win:'«Buen intento. Trabaja esa defensa.»',lose:'«Ganaste. ¿Cobras tus créditos o conoces mi lado oscuro?»'},
    pal:{skin:'#d9a070',hair:'#251e23',style:'buzz',beard:'#251e23',top:'#e6dfc9',bot:'#e6dfc9',legs:'#e6dfc9',gi:1,belt:'#14151f',bulk:1}},
  black_johnny:{name:'BLACK JOHNNY',sn:'BLACK J',tag:'DESAFIO DEL ECLIPSE',from:'MEX',boss:1,bg:'cji',theme:'boss',spec:'Versión más fuerte: presión extrema y llaves prohibidas del modo fantasía',stats:{SUB:96,PRE:94,GAS:92,VEL:80},hp:142,sets:['pressure','legs','forbidden'],
@@ -788,6 +788,27 @@ function mat(c,y0,a,b,ring){for(let y=y0;y<H;y+=12)for(let x=0;x<W;x+=16){c.fill
   c.fillStyle='rgba(255,255,255,.12)';c.fillRect(0,y0,W,1);
   if(ring){c.fillStyle=ring;c.fillRect(14,y0+8,W-28,1);c.fillRect(14,H-10,W-28,1);c.fillRect(14,y0+8,1,H-y0-18);c.fillRect(W-15,y0+8,1,H-y0-18)}}
 function paintBg(c,kind){const HY=GY-30,DY=Math.max(48,GY-58),rnd=(a=>()=>(a=(a*16807)%2147483647)/2147483647)(7);
+  if(['rooftop','carnales','flow','umbral'].includes(kind)){
+    if(kind==='rooftop'){
+      const sky=['#222b46','#443652','#755068','#b46e73','#e6a178'];for(let i=0;i<sky.length;i++){c.fillStyle=sky[i];c.fillRect(0,i*DY/5,W,Math.ceil(DY/5))}
+      c.fillStyle='#f0c487';c.fillRect(110,10,18,18);c.fillRect(108,14,22,10);
+      for(let i=0;i<17;i++){const x=i*11-4,bh=8+(i*17%23);c.fillStyle=i%2?'#35334d':'#2b3045';c.fillRect(x,DY-bh-4,10,bh+4);c.fillStyle='#d59d77';for(let wy=DY-bh;wy<DY-5;wy+=5)if(i%3)c.fillRect(x+3,wy,2,2)}
+      c.fillStyle='#171f32';c.fillRect(0,DY-6,W,6);c.fillStyle='#70888a';c.fillRect(0,DY-7,W,1);for(let x=0;x<W;x+=20)c.fillRect(x,DY-15,1,9);
+      mat(c,DY,'#366b6e','#306065','#e6b983');bannerBox(c,4,5,77,9,'#202b40','#6eaaa7','DEL BARRIO A LA CIMA','#f1d8b0',7);
+    }else if(kind==='carnales'){
+      c.fillStyle='#493843';c.fillRect(0,0,W,H);c.fillStyle='#62464d';for(let y=0;y<DY;y+=6){c.fillRect(0,y,W,1);for(let x=y%12?0:8;x<W;x+=16)c.fillRect(x,y,1,6)}
+      bannerBox(c,32,8,96,20,'#252b35','#d6a25d','DOS CARNALES','#e8bb79',56);ptext(c,'RESPETO Y FAMILIA',48,21,'#bbcebb');
+      for(const x of[9,143]){c.fillStyle='#191f2c';c.fillRect(x,8,7,DY-12);c.fillStyle='#dbb266';c.fillRect(x+1,9,5,3)}
+      mat(c,DY,'#725d51','#67534b','#dec494');
+    }else if(kind==='flow'){
+      c.fillStyle='#b4c9b1';c.fillRect(0,0,W,H);c.fillStyle='#7f9c83';for(let i=0;i<10;i++){const x=i*18+3;c.fillRect(x,0,3,DY);for(let y=5;y<DY;y+=13){c.fillStyle='#5b7e6d';c.fillRect(x-3,y,9,1);c.fillRect(x+3,y-3,6,2);c.fillStyle='#7f9c83'}}
+      bannerBox(c,42,10,76,17,'#2f514b','#d5d4a6','JARDIN FLOW','#e8e1bd',58);mat(c,DY,'#5b8777','#507c6f','#ddd3a7');
+    }else{
+      c.fillStyle='#22243b';c.fillRect(0,0,W,H);for(let i=0;i<5;i++){c.fillStyle=i%2?'#363553':'#2d304b';c.fillRect(i*34,0,20,DY);c.fillStyle='#626280';c.fillRect(i*34+2,0,1,DY)}
+      bannerBox(c,44,12,72,15,'#181e30','#9b8ec4','DOJO UMBRAL','#d0c1ec',58);mat(c,DY,'#3d415c','#363c55','#9d8bbc');
+    }
+    c.fillStyle='#1e2737';c.fillRect(0,H-6,W,6);ptext(c,'POSICION ANTES QUE SUMISION',28,H-5,'#d9c69b');return;
+  }
   if(kind==='adcc'){c.fillStyle='#0e1020';c.fillRect(0,0,W,H);crowd(c,0,4,W,DY-4,rnd,['#2a2b45','#35365a','#22233c','#3f3550']);
     c.fillStyle='rgba(255,245,200,.05)';for(const sx of[30,80,130]){c.beginPath();c.moveTo(sx,0);c.lineTo(sx-26,H);c.lineTo(sx+26,H);c.closePath();c.fill()}
     bannerBox(c,18,DY-32,124,13,'#0a0a12','#f6c744','ADCC WORLD CHAMPIONSHIP','#f6c744',22);
@@ -800,7 +821,7 @@ function paintBg(c,kind){const HY=GY-30,DY=Math.max(48,GY-58),rnd=(a=>()=>(a=(a*
   if(kind==='cji'){c.fillStyle='#160c28';c.fillRect(0,0,W,H);crowd(c,0,4,W,DY-4,rnd,['#3d1f5c','#57277f','#2a1442','#7a2f8f']);
     for(let i=0;i<14;i++){const x=(i*23+7)%W,y=6+((i*37)%(DY-24));c.fillStyle=i%3?'#ff4fd8':'#4fe0ff';c.fillRect(x,y,2,2)}
     bannerBox(c,14,DY-34,132,15,'#0d0618','#ff4fd8','CJI INVITATIONAL · LAS VEGAS','#4fe0ff',18);
-    mat(c,DY,'#2a1442','#31184e','#ff4fd8');c.fillStyle='#0d0618';c.fillRect(0,H-8,W,8);ptext(c,'SOLO SUMISION',46,H-7,'#ff4fd8');return}
+    mat(c,DY,'#2a1442','#31184e','#ff4fd8');c.fillStyle='#0d0618';c.fillRect(0,H-8,W,8);ptext(c,'CUMBRE DEL CIRCUITO',42,H-7,'#ff4fd8');return}
   if(kind==='garage'){c.fillStyle='#a8583c';c.fillRect(0,0,W,HY);c.fillStyle='#8a4630';for(let y=0;y<HY;y+=5){c.fillRect(0,y,W,1);for(let x=(y%10?0:6);x<W;x+=12)c.fillRect(x,y,1,5)}
     c.fillStyle='#f4f4e4';c.fillRect(52,DY-30,56,17);c.fillStyle=INK;c.fillRect(52,DY-30,56,1);c.fillRect(52,DY-14,56,1);ptext(c,'OPEN MAT',64,DY-27,'#e0483c');ptext(c,'DOMINGO 11AM',56,DY-20,INK);
     c.fillStyle=INK;c.fillRect(128,0,1,DY-40);c.fillStyle='#f6c744';c.fillRect(126,DY-40,5,5);
@@ -816,6 +837,7 @@ function paintBg(c,kind){const HY=GY-30,DY=Math.max(48,GY-58),rnd=(a=>()=>(a=(a*
 function drawBg(c,kind,fr,clock){const k=kind+H;if(BGK!==k){BGC=mkCv(W,H);paintBg(BGC.getContext('2d'),kind);BGK=k}c.drawImage(BGC,0,0);const DY=Math.max(48,GY-58);
   if(kind==='adcc'||kind==='ibjjf'||kind==='cji'){for(let i=0;i<14;i++){const x=((fr*5+i*47)%(W/3|0))*3,y=6+((fr*2+i*31)%((DY-14)/3|0))*3;
       if(((fr>>2)+i)%3===0){c.fillStyle=kind==='cji'?(i&1?'#ff4fd8':'#4fe0ff'):'#fff';c.fillRect(x,y,2,2)}}}
+  if(kind==='rooftop'){c.fillStyle='#f4d29a';for(let i=0;i<8;i++)c.fillRect((i*23+fr/12|0)%160,Math.max(3,DY-18+(i%3)*3),1,1)}
   if(kind==='dojo'&&clock)ptext(c,clock,clock.length>4?134:136,DY-41,'#ff4a3a')}
 const toScr=(x,y)=>[(x-W/2)*2+W/2,(y-GY)*2+GY];
 function drawScene(c,v,P,E,fr,fxs={},o={}){H=c.canvas.height||H;GY=H-14;c.imageSmoothingEnabled=false;c.save();
@@ -941,7 +963,7 @@ function loop(){fr++;
   if($('#s-battle').classList.contains('on')&&view){if(fr%30===1)fitCanvas(cv);drawScene(cx,view,PP,EP,fr,fxs,{bg:BG,clock:clockStr(view)});
     if(fxs.shake>0)fxs.shake--;if(fxs.flash>0)fxs.flash--;if(fxs.spark>0)fxs.spark--;if(fxs.hitT>0)fxs.hitT--;if(fxs.lunge)fxs.lunge=Math.trunc(fxs.lunge*.8)}
   else if($('#s-map').classList.contains('on')){if(fr%40===1)fitCanvas(mcv);mapTick();drawMap(mcx,fr)}
-  else if($('#s-title').classList.contains('on')&&fr%6===0){fitCanvas(tcv);drawScene(tcx,{pos:'STANDING'},ROSTER.aurik.pal,ROSTER.ryker.pal,fr,{},{bg:'arena'})}
+  else if($('#s-title').classList.contains('on')&&fr%6===0){fitCanvas(tcv);drawScene(tcx,{pos:'STANDING'},ROSTER.aurik.pal,ROSTER.ryker.pal,fr,{},{bg:'rooftop'})}
   requestAnimationFrame(loop)}
 
 /* ---- Selección (tu luchador → rival) ---- */
@@ -1129,9 +1151,9 @@ $('#aGo').onclick=async()=>{const user=$('#aUser').value.trim(),mail=$('#aMail')
 /* ---- Modo aventura: circuito mundial ---- */
 const CIRCUIT=[
  {id:'copa',name:'COPA HORIZONTE',bg:'dojo',requires:[],bonus:30,fights:['chanops','niko'],desc:'Primer paso. Dos combates y tu primera medalla.'},
- {id:'flow',name:'COPA FLOW',bg:'dojo',requires:[],bonus:40,fights:['chelo','mika','luana'],desc:'Barridos, movilidad y guardia. Tres estilos diferentes.'},
- {id:'umbral',name:'DESAFIO UMBRAL',bg:'garage',requires:['copa'],bonus:50,fights:['kolya','bazza','tito'],desc:'Control, paciencia y escapes. Tres rondas de presión.'},
- {id:'carnales',name:'DOS CARNALES DOJO',bg:'dojo',requires:['copa'],bonus:120,fights:['chanops','vagabundo','johnny','black_johnny'],desc:'Vence a Johnny C. Cobra 40 créditos o reta a Black Johnny por la medalla y 120 créditos.'},
+ {id:'flow',name:'COPA FLOW',bg:'flow',requires:[],bonus:40,fights:['chelo','mika','luana'],desc:'Barridos, movilidad y guardia. Tres estilos diferentes.'},
+ {id:'umbral',name:'DESAFIO UMBRAL',bg:'umbral',requires:['copa'],bonus:50,fights:['kolya','bazza','tito'],desc:'Control, paciencia y escapes. Tres rondas de presión.'},
+ {id:'carnales',name:'DOS CARNALES DOJO',bg:'carnales',requires:['copa'],bonus:120,fights:['chanops','vagabundo','johnny','black_johnny'],desc:'Vence a Johnny C. Cobra 40 créditos o reta a Black Johnny por la medalla y 120 créditos.'},
  {id:'ibjjf',name:'IBJJF WORLDS',bg:'ibjjf',requires:['copa','flow','umbral','carnales'],bonus:70,fights:['keiji','luana','tonelada'],desc:'Reúne las cuatro medallas de dojo. Tres rondas de campeonato.'},
  {id:'adcc',name:'ADCC TRIALS',bg:'adcc',requires:['ibjjf'],bonus:90,fights:['kolya','mika','chelo'],desc:'Después del Worlds: tres combates sin kimono.'},
  {id:'cji',name:'CJI INVITATIONAL',bg:'cji',requires:['copa','flow','umbral','carnales','ibjjf','adcc'],bonus:160,fights:['tito','bazza','ryker'],desc:'Cumbre del circuito. Exige las otras seis medallas. Reglas RPG: puntos y sumisión.'}];
