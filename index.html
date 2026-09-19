@@ -284,7 +284,11 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
    CONFIG — pega aquí tus llaves de Supabase (Settings > API).
    Vacío = MODO DEMO (todo local, sin backend).
    ============================================================ */
-const CONFIG={SUPABASE_URL:'',SUPABASE_ANON_KEY:'',
+/* La llave publicable es publica por diseno: viaja al navegador en cualquier app de Supabase.
+   Lo que protege los datos es Row Level Security, no esconder esta cadena. Ver docs/SECURITY.md. */
+const CONFIG={
+  SUPABASE_URL:'https://gxhchitndagpfzjmaeiy.supabase.co',
+  SUPABASE_ANON_KEY:'sb_publishable_j3jnwUBe64RLmMUdbX1ZKg__s0erNxs',
   SUPABASE_JS:'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'};
 
 /*ENGINE-START — motor táctico sin DOM (portable a React / Edge Function para PvP) */

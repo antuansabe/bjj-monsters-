@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    name: Sintaxis, balance y esquema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Sintaxis del JavaScript del juego
+        run: |
+          sed -n '/^<script>$/,/^<\/script>$/p' index.html | sed '1d;$d' > /tmp/game.js
+          node --check /tmp/game.js
+
+      - name: Balance, IDs de tecnicas y cadenas
+        run: node tools/sim.js 300
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Sintaxis del esquema SQL
+        run: |
+          pip install --quiet pglast
+          python - <<'PY'
+          import re, pglast
+          from pglast.parser import parse_plpgsql_json
+          sql = open('supabase/schema.sql').read()
+          print('sentencias:', len(pglast.parse_sql(sql)))
+          for m in re.finditer(r'(create or replace function public\.\w+.*?\$\$.*?\$\$)', sql, re.S | re.I):
+              if 'language sql' not in m.group(1):
+                  parse_plpgsql_json(m.group(1) + ';')
+          print('PL/pgSQL OK')
+          PY
+
+      - name: El esquema y la migracion no deben divergir
+        run: diff -q supabase/schema.sql supabase/migrations/20260919000000_init.sql
