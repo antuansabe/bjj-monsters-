@@ -1077,9 +1077,6 @@ const CIRCUIT=[
  {id:'copa',name:'COPA ACADEMIA',bg:'dojo',lp:20,fights:['spaz','niko'],desc:'Tu primer torneo. Dos combates seguidos.'},
  {id:'ibjjf',name:'IBJJF WORLDS',bg:'ibjjf',lp:40,fights:['keiji','luana','tonelada'],desc:'Con kimono. Tres rondas.'},
  {id:'adcc',name:'ADCC TRIALS',bg:'adcc',lp:60,fights:['kolya','mika','chelo'],desc:'Sin kimono. Tres rondas duras.'},
- {id:'shop',name:'PUROS BRONCAS STORE',x:25,y:27,w:7,h:4,roof:'#267366',wall:'#f0d5a3',trim:'#edb35c',sign:'BRONCAS',stage:null},
- {id:'flow',name:'DOJO FLOW',x:25,y:17,w:6,h:4,roof:'#465a8c',wall:'#d9dfcf',trim:'#6da9ae',sign:'FLOW',stage:null,rivals:['chelo','mika','luana']},
- {id:'nogi',name:'CLUB DE PIERNAS',x:3,y:28,w:7,h:4,roof:'#734c69',wall:'#d5b7a3',trim:'#dfa975',sign:'LEGS',stage:null,rivals:['kolya','bazza','tito']},
  {id:'cji',name:'CJI INVITATIONAL',bg:'cji',lp:100,fights:['tito','bazza','ryker'],desc:'Tres medallas para entrar. El Rey te espera al final. Reglas RPG: puntos y sumisión.'}];
 let circuit=null;
 const canEnter=i=>CIRCUIT.slice(0,i).every(t=>progress().medals.includes(t.id));

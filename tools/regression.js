@@ -13,10 +13,13 @@ S.over={winner:'p'};before=JSON.stringify(S);E.resolve(S,'p',E.U.find(m=>m.id===
 // El bloque incluye PLAYABLE como dependencia explícita, sin DOM.
 const profile={progress:{stage:99,medals:[]}};
 const prog=new Function('account','PLAYABLE',between('const CIRCUIT=','async function saveProgress')+';return{CIRCUIT,canEnter,unlockedFighters,progress};')({profile},Object.keys(E.ROSTER).filter(k=>!['spaz','ryker'].includes(k)));
+assert.deepEqual(prog.CIRCUIT.map(t=>t.id),['copa','ibjjf','adcc','cji']);
+for(const t of prog.CIRCUIT){assert.ok(t.fights.length>0);for(const id of t.fights)assert.ok(E.ROSTER[id],id+' existe');}
 assert.equal(prog.canEnter(3),false,'Inflar stage no abre CJI');
 profile.progress.medals=['copa','ibjjf'];assert.equal(prog.canEnter(3),false);
 profile.progress.medals.push('adcc');assert.equal(prog.canEnter(3),true);
 const map=new Function(between('const TS=16','const me=')+';return{buildMap,VENUES,NPCS,MW,MH};')();
+for(const v of map.VENUES.filter(v=>v.stage!==null)){assert.ok(prog.CIRCUIT[v.stage].fights.length);assert.equal(prog.CIRCUIT[v.stage].id,v.id==='dojo'?'copa':v.id)}
 const grid=map.buildMap(),seen=new Set(['12,22']),queue=[[12,22]];
 for(const[x,y]of queue)for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy,key=X+','+Y;if(X<0||Y<0||X>=map.MW||Y>=map.MH||seen.has(key)||'TB~'.includes(grid[Y][X])||map.NPCS.some(n=>n.x===X&&n.y===Y))continue;seen.add(key);queue.push([X,Y])}
 for(const v of map.VENUES)assert.ok(seen.has(v.dx+','+v.dy),v.name+' accesible desde el inicio');
