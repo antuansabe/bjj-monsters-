@@ -919,7 +919,7 @@ function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',fal
   $('#selSub').textContent=T?('CON QUIEN VAS A PELEAR EL TORNEO · '+T.fights.length+' COMBATES'):(me?(first?'PRIMER COMBATE GUIADO · CONTRA EL ESPAZADO':TIPS[(Math.random()*TIPS.length)|0]):'EL REY DA +25 LP. EL ESPAZADO… +5.');
   $('#selBack').textContent=sel.circuit?'VOLVER':(me?'INICIO':'VOLVER');$('#selGo').disabled=true;
   $('#selGo').textContent=T?'EMPEZAR TORNEO':(me&&!first?'ELEGIR RIVAL':'¡OSS! A PELEAR');
-  $('#detail').innerHTML='<p class="sm center" style="color:var(--line);margin:auto">Toca un retrato para ver su juego.</p>';const g=$('#grid');g.innerHTML='';
+  $('#detail').innerHTML='<p class="sm center" style="color:var(--line);margin:auto">Toca un retrato para ver su juego. Las medallas desbloquean nuevos luchadores.</p>';const g=$('#grid');g.innerHTML='';
   keys.forEach(k=>{const d=defOf(k),b=document.createElement('button');b.className='face'+(d.boss?' boss':'');b.setAttribute('aria-pressed','false');b.setAttribute('aria-label',d.name);
     b.innerHTML=`<canvas width="24" height="24"></canvas><small>${esc(d.sn)}</small>`;g.appendChild(b);drawFace(b.querySelector('canvas').getContext('2d'),d.pal,d.boss?'#9a2a20':d.joke?'#4a5a3a':'#2f6fb8');
     b.onclick=()=>{sel.cur=k;g.querySelectorAll('.face').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#selGo').disabled=false;const st=d.stats,bar=v=>`<div class="bar"><i style="width:${v}%"></i></div>`;
@@ -1063,7 +1063,7 @@ $('#aGo').onclick=async()=>{const user=$('#aUser').value.trim(),mail=$('#aMail')
   if(!/^\S+@\S+\.\S+$/.test(mail)){msg.textContent='Escribe un email válido.';return}
   if(pass.length<6){msg.textContent='La contraseña necesita 6 caracteres o más.';return}
   $('#aGo').disabled=true;msg.textContent='Conectando…';
-  try{const c=await sbInit();
+  try{sbDown=false;const c=await sbInit();
     if(!c)throw new Error('Servidor no disponible. Tu partida local sigue guardada.');
     {if(signup)store.set('bjjm_signup_transfer',{email:mail.toLowerCase(),result:pending,fighter:myFighter,created:Date.now()});const r=signup?await c.auth.signUp({email:mail,password:pass,options:{data:{username:user},emailRedirectTo:location.origin+location.pathname}}):await c.auth.signInWithPassword({email:mail,password:pass});if(r.error)throw r.error;
       if(!r.data.session){openAuth(false);msg.textContent='Te enviamos un correo. Abre el enlace desde este mismo teléfono y entrarás directo al juego.';return}
