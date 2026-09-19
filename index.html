@@ -285,7 +285,7 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
 </section>
 
 <section class="scr" id="s-shop">
-  <h2 class="pix">PUROS BRONCAS</h2>
+  <h2 class="pix">PURAS BRONCAS STORE</h2>
   <div class="box result"><canvas id="shopFace" width="24" height="24" aria-label="Don Broncas, calvo y con bigote"></canvas><p class="sm" id="shopQuote"></p></div>
   <p class="sm center" id="shopBalance"></p>
   <p class="xs center mute">Gana 60 créditos por victoria y 20 por participar. Comprar no reduce tu nivel.</p>
@@ -315,7 +315,7 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
   <p class="xs mute center" id="hubMode" style="margin:0"></p>
   <div class="tiles">
     <button class="btn plum tile" id="tCircuit" style="grid-column:1/-1;min-height:92px"><b>MODO AVENTURA</b><small id="tCircuitSub">Recorre el mapa y entra a los torneos</small></button>
-    <button class="btn dark tile" id="tAtlas"><b>MAPA Y DESTINOS</b><small>Dojo, torneos y Puros Broncas</small></button>
+    <button class="btn dark tile" id="tAtlas"><b>MAPA Y DESTINOS</b><small>Dojo, torneos y Puras Broncas Store</small></button>
     <button class="btn red tile" id="tQuick"><b>COMBATE RAPIDO</b></button>
     <button class="btn gold tile" id="tBuild"><b id="tBuildLabel">CREAR LUCHADOR</b></button>
     <button class="btn tile" id="tRank"><b>RANKING</b><small>Tabla mundial</small></button>
@@ -1102,7 +1102,7 @@ $('#cBack').onclick=()=>{circuit=null;openHub()};
 /* ==================== MAPA: mundo caminable ==================== */
 const TS=16,MW=36,MH=38;
 const VENUES=[
- {id:'shop',name:'PUROS BRONCAS STORE',x:25,y:27,w:7,h:4,roof:'#267366',wall:'#f0d5a3',trim:'#edb35c',sign:'BRONCAS',stage:null},
+ {id:'shop',name:'PURAS BRONCAS STORE',x:25,y:27,w:7,h:4,roof:'#267366',wall:'#f0d5a3',trim:'#edb35c',sign:'PURAS BRONCAS STORE',stage:null},
  {id:'flow',name:'DOJO FLOW',x:25,y:17,w:6,h:4,roof:'#465a8c',wall:'#d9dfcf',trim:'#6da9ae',sign:'FLOW',stage:null,rivals:['chelo','mika','luana']},
  {id:'nogi',name:'CLUB DE PIERNAS',x:3,y:28,w:7,h:4,roof:'#734c69',wall:'#d5b7a3',trim:'#dfa975',sign:'LEGS',stage:null,rivals:['kolya','bazza','tito']},
  {id:'cji',name:'CJI INVITATIONAL',x:8,y:1,w:8,h:4,roof:'#57277f',wall:'#2a1442',trim:'#ff4fd8',sign:'CJI',stage:3},
@@ -1167,7 +1167,7 @@ function interact(){if(mapBusy||me.moving)return;const[dx,dy]=DIRS[me.dir],n=NPC
   else{const v=VENUES.find(v=>v.dx===me.x+dx&&v.dy===me.y+dy);if(v){me.x+=dx;me.y+=dy;me.moving=true}}}
 function openMap(fresh){circuit=null;if(!MAPT)MAPT=buildMap();show('s-map');Snd.theme('title');held=null;mapBusy=false;fitCanvas($('#mapCv'));
   const p=account.profile,pr=progress();$('#mhBelt').textContent='CINTA '+UP(p.belt||'blanco');$('#mhLp').textContent=(p.lp||0)+' LP';$('#mhMed').textContent=pr.medals.length+'/'+CIRCUIT.length+' MEDALLAS';
-  if(fresh&&!store.get('bjjm_maptip',false)){store.set('bjjm_maptip',true);mapSay(['Este es el circuito. Camina con la cruceta y entra por la puerta de cada sede.','Con A hablas y avanzas el diálogo. Empieza por la ACADEMIA, a la derecha. En MENÚ > MAPA Y DESTINOS puedes viajar a Puros Broncas y a los otros dojos.'])}}
+  if(fresh&&!store.get('bjjm_maptip',false)){store.set('bjjm_maptip',true);mapSay(['Este es el circuito. Camina con la cruceta y entra por la puerta de cada sede.','Con A hablas y avanzas el diálogo. Empieza por la ACADEMIA, a la derecha. En MENÚ > MAPA Y DESTINOS puedes viajar a Puras Broncas Store y a los otros dojos.'])}}
 document.querySelectorAll('.dpad button').forEach(b=>{const d=b.dataset.d,on=e=>{e.preventDefault();Snd.wake();held=d;b.classList.add('held')},off=()=>{if(held===d)held=null;b.classList.remove('held')};
   b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off))});
 addEventListener('blur',()=>{held=null});
@@ -1192,7 +1192,7 @@ function enterVenue(v){if(v.id==='shop'){openShop(v);return}const pr=progress(),
   add('SALIR AL MAPA','dark',()=>leaveVenue(v))}
 
 
-/* ---- Puros Broncas: economía PvE, créditos separados de XP ---- */
+/* ---- Puras Broncas Store: economía PvE, créditos separados de XP ---- */
 const SHOP=[
  {id:'gi_moss',name:'KIMONO MUSGO',cost:120,desc:'Kimono verde bosque. Se equipa en tu personaje.',look:{gi:true,rash:'#3f7562'}},
  {id:'gi_sunset',name:'KIMONO ATARDECER',cost:180,desc:'Kimono terracota para destacar en el tatami.',look:{gi:true,rash:'#c27656'}},
