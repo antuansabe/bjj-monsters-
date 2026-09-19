@@ -380,7 +380,7 @@ const opp=w=>w==='p'?'e':'p';
 const MAX_TURNS=24,SEC_PER_TURN=25,CHAIN_BONUS=12;
 // Sedes del juego. Los nombres de torneo se editan aqui (ver docs/ROSTER.md).
 const ARENAS={dojo:{n:'ACADEMIA PORRADA',sub:'OPEN MAT DEL DOMINGO'},garage:{n:'GARAJE DE LA COLONIA',sub:'TATAMI PRESTADO'},
-  ibjjf:{n:'IBJJF WORLDS',sub:'CON KIMONO · PUNTOS Y VENTAJAS'},adcc:{n:'ADCC WORLD CHAMPIONSHIP',sub:'SIN KIMONO · EL MAS DURO'},cji:{n:'CJI INVITATIONAL',sub:'LAS VEGAS · SOLO SUMISION'}};
+  ibjjf:{n:'IBJJF WORLDS',sub:'CON KIMONO · PUNTOS Y VENTAJAS'},adcc:{n:'ADCC WORLD CHAMPIONSHIP',sub:'SIN KIMONO · EL MAS DURO'},cji:{n:'CJI INVITATIONAL',sub:'LAS VEGAS · REGLAS RPG'}};
 const POS_ORDER=['STANDING','TURTLE','GUARD','HALF','SIDE','MOUNT','BACK','ASHI'];
 const POS={STANDING:{n:'DE PIE',s:'PIE'},TURTLE:{n:'TORTUGA',s:'TOR'},GUARD:{n:'GUARDIA',s:'GUA'},HALF:{n:'MEDIA GUARDIA',s:'MED'},
   SIDE:{n:'CONTROL LATERAL',s:'LAT'},MOUNT:{n:'MONTADA',s:'MON'},BACK:{n:'ESPALDA',s:'ESP'},ASHI:{n:'ASHI GARAMI',s:'ASHI'}};
@@ -600,7 +600,7 @@ function setPos(S,w,to){const[pos,role]=to.split(':');S.pos=pos;S.top=pos==='STA
 function hurt(S,w,amt,ev,tech){const t=opp(w),d=S[t];const dmg=Math.max(1,Math.round(amt*(d.def>0?.7:1)));d.hp=Math.max(0,d.hp-dmg);ev.push({t:'dmg',who:t,amt:dmg});
   if(d.hp<=0&&!S.over)S.over={winner:w,by:'exhaust',tech}}
 
-function resolve(S,w,m,rng=Math.random){const ev=[],a=S[w],d=S[opp(w)];
+function resolve(S,w,m,rng=Math.random){if(S.over||!m||!avail(S,w).includes(m)||!usable(S,w,m))return[];const ev=[],a=S[w],d=S[opp(w)];
   const say=text=>ev.push({t:'say',text}),sync=()=>ev.push({t:'sync',snap:snap(S)}),fx=n=>ev.push({t:'fx',n,who:w});
   const c=chance(S,w,m),wasChain=chained(S,w,m);a.chain=null;
   a.sta=Math.max(0,a.sta-m.cost);if(m.cd)a.cd[m.id]=m.cd;
@@ -616,7 +616,7 @@ function resolve(S,w,m,rng=Math.random){const ev=[],a=S[w],d=S[opp(w)];
     hurt(S,w,m.dmg*scale*(.85+rng()*.3),ev,m.n);d.sta=Math.max(0,d.sta-6);if(c>=30)a.adv++;if(m.failTo)setPos(S,w,m.failTo);fx('hit');sync();
     say(S.over?`${d.sn} ya no puede más y se rinde verbalmente.`:`¡${d.sn} defiende! Pero le cuesta caro.`+(m.failTo?` ${a.sn} cae a ${POS[S.pos].n}.`:''));return ev}
   if(m.to){say(`${a.sn} busca ${m.n}${m.sig?'!':'.'}`);
-    if(rng()*100<c){setPos(S,w,m.to);a.chain=null;if(m.pts)a.pts+=m.pts;if(m.dmg)hurt(S,w,m.dmg*scale,ev,m.n);fx(m.fx||'move');sync();
+    if(rng()*100<c){setPos(S,w,m.to);a.chain=(m.chain||[]).filter(id=>avail(S,w).some(next=>next.id===id));if(m.pts)a.pts+=m.pts;if(m.dmg)hurt(S,w,m.dmg*scale,ev,m.n);fx(m.fx||'move');sync();
       say(S.over?`¡Impacto total! ${d.sn} no puede continuar.`:`¡Lo consigue! ${POS[S.pos].n}${m.pts?` (+${m.pts} pts)`:''}.`)}
     else{a.sta=Math.max(0,a.sta-4);sync();say(`${d.sn} lo neutraliza.`)}
     return ev}
@@ -626,7 +626,7 @@ function resolve(S,w,m,rng=Math.random){const ev=[],a=S[w],d=S[opp(w)];
   return ev}
 
 const ITEMS={electro:{n:'Electrolitos',d:'+45 STA'},tape:{n:'Tape de Dedos',d:'+10% agarre 3T'},acai:{n:'Açaí',d:'+40 HP, quita TILT'}};
-function useItem(S,id){const ev=[],a=S.p;S.bag[id]--;let heal=0;
+function useItem(S,id){if(S.over||!ITEMS[id]||!(S.bag[id]>0))return[];const ev=[],a=S.p;S.bag[id]--;let heal=0;
   if(id==='electro')a.sta=Math.min(a.maxSta,a.sta+45);
   if(id==='tape')a.grip=4;
   if(id==='acai'){heal=Math.min(40,a.maxHp-a.hp);a.hp+=heal;a.tilt=0}
@@ -875,7 +875,7 @@ let sbDown=false;
 async function sbInit(){if(!CONFIG.SUPABASE_URL||!CONFIG.SUPABASE_ANON_KEY||sbDown)return null;if(sb)return sb;
   try{await loadScript(CONFIG.SUPABASE_JS);sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);return sb}
   catch(e){sbDown=true;return null}}
-async function loadProfile(){const{data:{user}}=await sb.auth.getUser();if(!user)return false;const{data:p}=await sb.from('profiles').select('*').eq('id',user.id).single();if(!p)return false;account={mode:'live',profile:p,uid:user.id};
+async function loadProfile(){const{data:{user}}=await sb.auth.getUser();if(!user)return false;const{data:p,error:profileError}=await sb.from('profiles').select('*').eq('id',user.id).single();if(profileError||!p)return false;account={mode:'live',profile:p,uid:user.id};
   const{data:f}=await sb.from('fighters').select('*').eq('profile_id',user.id).eq('is_active',true).maybeSingle();myFighter=f?Object.assign({id:f.id,name:f.name,style:f.style,rash:f.rashguard_color,short:f.short_color},f.look||{}):null;store.set('bjjm_returning',true);return true}
 async function recordMatch(o){const won=o.winner==='p',p=account.profile;
   if(account.mode==='live'){try{const{data,error}=await sb.rpc('record_pve_match',{p_npc:o.foe,p_won:won,p_result:o.by==='exhaust'?'submission':o.by,p_technique:o.tech||null,p_position:o.pos,p_turns:o.turns,p_points:o.pp,p_opp_points:o.ep});
@@ -884,6 +884,11 @@ async function recordMatch(o){const won=o.winner==='p',p=account.profile;
   if(account.mode!=='live')store.set(account.mode==='demo'?'bjjm_demo':'bjjm_guest',p)}
 function perks(){const p=account.profile,b=BELT_PERKS[p.belt||'blanco']||BELT_PERKS.blanco,lv=Math.min(15,(p.level||1)-1);return{hp:b.hp+lv*2+(progress().shop?.owned?.includes('conditioning')?6:0),bag:b.bag||{},cb:b.cb||CHAIN_BONUS,lv}}
 
+async function recoverTrial(email){const t=store.get('bjjm_signup_transfer',null);if(!t||t.email!==String(email||'').toLowerCase()||Date.now()-t.created>86400000)return;
+  if((account.profile.wins||0)+(account.profile.losses||0)===0&&t.result)await recordMatch(t.result);
+  if(!myFighter&&t.fighter){myFighter={...t.fighter};delete myFighter.id;}
+  store.del('bjjm_signup_transfer');pending=null;
+}
 /* ---- Render loop ---- */
 const mcv=$('#mapCv'),mcx=mcv.getContext('2d');
 const cv=$('#cv'),cx=cv.getContext('2d'),tcv=$('#titleCv'),tcx=tcv.getContext('2d');let fr=0,view=null,PP=null,EP=null,BG='dojo',fxs={shake:0,flash:0,pulse:false,lunge:0,spark:0,hitT:0,flashWho:null};
@@ -937,7 +942,8 @@ async function say(text,el=$('#dlgText'),hold){const box=el.closest('.box');el.t
   skip=false;if(box)box.classList.add('ready');
   await wait(autoText?Math.max(900,hold||0,text.length*42):20000);
   if(box)box.classList.remove('ready')}
-async function openVS(){const me=sel.me,foe=defOf(sel.foeKey),T=circuit?CIRCUIT[circuit.si]:null,ar=ARENAS[(T?T.bg:foe.bg)||'dojo'];
+let vsStarting=false;
+async function openVS(){if(vsStarting)return;vsStarting=true;const me=sel.me,foe=defOf(sel.foeKey),T=circuit?CIRCUIT[circuit.si]:null,ar=ARENAS[(T?T.bg:foe.bg)||'dojo'];
   show('s-vs');Snd.stop();Snd.cur=null;Snd.thump();haptic([30,40,90]);
   drawFace($('#vsP').getContext('2d'),me.pal,'#2f6fb8');drawFace($('#vsE').getContext('2d'),foe.pal,'#9a2a20');
   $('#vsPn').innerHTML=`${esc(me.sn)}<br><span class="xs">${esc(me.tag)}</span>`;$('#vsEn').innerHTML=`${esc(foe.sn)}<br><span class="xs">${esc(foe.tag)}</span>`;
@@ -945,7 +951,7 @@ async function openVS(){const me=sel.me,foe=defOf(sel.foeKey),T=circuit?CIRCUIT[
   await say(T?`${ar.n} — ${ar.sub}. Ronda ${circuit.idx+1} de ${T.fights.length}.`:`${ar.n} — ${ar.sub}.`,$('#vsText'),1200);
   Snd.talk();await say(`${foe.sn}: ${foe.q.intro}`,$('#vsText'),1500);
   const w=$('#wipe');w.classList.remove('on');void w.offsetWidth;w.classList.add('on');Snd.whoosh();await sleep(620);
-  startBattle(me,foe,sel.foeKey,T?T.bg:null);await sleep(120);w.classList.remove('on')}
+  vsStarting=false;startBattle(me,foe,sel.foeKey,T?T.bg:null);await sleep(120);w.classList.remove('on')}
 $('#s-vs').onclick=tapNow;
 
 /* ---- Combate ---- */
@@ -1016,11 +1022,11 @@ function gateButtons(mode){const row=$('#gRow'),main=$('#btnSignup');row.innerHT
   if(mode==='stage'){main.textContent='VOLVER AL MAPA';main.className='btn gold';main.onclick=back;add('IR AL MENU','dark',()=>{circuit=null;openHub()});return}
   if(mode==='retry'){main.textContent='REINTENTAR TORNEO';main.className='btn red';main.onclick=()=>{circuit={si:circuit.si,idx:0,venue:circuit.venue};sel.foeKey=CIRCUIT[circuit.si].fights[0];openVS()};
     add('VOLVER AL MAPA','dark',back);return}
-  const guest=account.mode==='guest';main.textContent=guest?'CREAR CUENTA Y GUARDAR':'IR AL HUB';main.className='btn gold';
-  main.onclick=()=>guest?openAuth(true):openHub();
+  const guest=account.mode==='guest';main.textContent=guest?'CREAR CUENTA Y GUARDAR':'CONTINUAR AVENTURA';main.className='btn gold';
+  main.onclick=()=>guest?openAuth(true):continueAdventure();
   if(guest)add('CREAR PERSONAJE LOCAL','dark',openBuilder);
   add('REVANCHA','red',()=>{tapNow();openVS()});sel.fromMap?add('VOLVER AL MAPA','dark',()=>leaveVenue(sel.fromMap)):add('OTRO COMBATE','dark',openSelect)}
-function nextRound(){circuit.idx++;sel.foeKey=CIRCUIT[circuit.si].fights[circuit.idx];openVS()}
+function nextRound(){if(vsStarting)return;circuit.idx++;sel.foeKey=CIRCUIT[circuit.si].fights[circuit.idx];openVS()}
 async function openGate(o){show('s-gate');const won=o.winner==='p',b=$('#gBanner');b.textContent=won?'¡VICTORIA!':'DERROTA';b.className='banner '+(won?'win':'lose');
   $('#gHow').textContent=UP((o.by==='points'?'POR PUNTOS':o.by==='tapout'?'RENDICION':'POR SUMISION')+' · '+(o.tech||'')+` · ${o.turns} TURNOS`);
 drawFace($('#gFace').getContext('2d'),FOE.pal,won?'#4a5a6a':'#9a2a20');
@@ -1057,9 +1063,9 @@ $('#aGo').onclick=async()=>{const user=$('#aUser').value.trim(),mail=$('#aMail')
   $('#aGo').disabled=true;msg.textContent='Conectando…';
   try{const c=await sbInit();
     if(!c)throw new Error('Servidor no disponible. Tu partida local sigue guardada.');
-    {const r=signup?await c.auth.signUp({email:mail,password:pass,options:{data:{username:user},emailRedirectTo:location.origin+location.pathname}}):await c.auth.signInWithPassword({email:mail,password:pass});if(r.error)throw r.error;
+    {if(signup)store.set('bjjm_signup_transfer',{email:mail.toLowerCase(),result:pending,fighter:myFighter,created:Date.now()});const r=signup?await c.auth.signUp({email:mail,password:pass,options:{data:{username:user},emailRedirectTo:location.origin+location.pathname}}):await c.auth.signInWithPassword({email:mail,password:pass});if(r.error)throw r.error;
       if(!r.data.session){openAuth(false);msg.textContent='Te enviamos un correo. Abre el enlace desde este mismo teléfono y entrarás directo al juego.';return}
-      if(!await loadProfile())throw new Error('No pudimos cargar tu perfil. Intenta entrar otra vez.');if(signup&&pending){await recordMatch(pending);pending=null}}
+      if(!await loadProfile())throw new Error('No pudimos cargar tu perfil. Intenta entrar otra vez.');await recoverTrial(mail);}
     $('#modal').classList.remove('on');$('#aPass').value='';Snd.ok();continueAdventure()}
   catch(e){msg.textContent=/already|registered/i.test(e.message)?'Ese email ya tiene cuenta. Toca «Ya tengo cuenta».':/Invalid login/i.test(e.message)?'Email o contraseña incorrectos.':/duplicate|unique/i.test(e.message)?'Ese usuario ya existe. Prueba otro.':/rate/i.test(e.message)?'Demasiados intentos. Espera un minuto.':'No se pudo conectar: '+e.message}
   finally{$('#aGo').disabled=false}};
@@ -1072,7 +1078,7 @@ const CIRCUIT=[
  {id:'shop',name:'PUROS BRONCAS STORE',x:25,y:27,w:7,h:4,roof:'#267366',wall:'#f0d5a3',trim:'#edb35c',sign:'BRONCAS',stage:null},
  {id:'flow',name:'DOJO FLOW',x:25,y:17,w:6,h:4,roof:'#465a8c',wall:'#d9dfcf',trim:'#6da9ae',sign:'FLOW',stage:null,rivals:['chelo','mika','luana']},
  {id:'nogi',name:'CLUB DE PIERNAS',x:3,y:28,w:7,h:4,roof:'#734c69',wall:'#d5b7a3',trim:'#dfa975',sign:'LEGS',stage:null,rivals:['kolya','bazza','tito']},
- {id:'cji',name:'CJI INVITATIONAL',bg:'cji',lp:100,fights:['tito','bazza','ryker'],desc:'Solo sumision. El Rey te espera al final.'}];
+ {id:'cji',name:'CJI INVITATIONAL',bg:'cji',lp:100,fights:['tito','bazza','ryker'],desc:'Tres medallas para entrar. El Rey te espera al final. Reglas RPG: puntos y sumisión.'}];
 let circuit=null;
 const canEnter=i=>CIRCUIT.slice(0,i).every(t=>progress().medals.includes(t.id));
 const unlockedFighters=()=>{const n=progress().medals.filter(id=>CIRCUIT.some(t=>t.id===id)).length;return PLAYABLE.filter((k,i)=>i<3+n*3)};
@@ -1246,7 +1252,7 @@ async function examPass(){const E=EX,p=account.profile;[...$('#pads').children].
 const BELTS=[['blanco','#f4f4e4'],['azul','#3b7dd8'],['morado','#8a4fc2'],['marron','#7a4a24'],['negro','#14151f']];
 function openHub(){show('s-hub');loadLegends();Snd.theme('title');const p=account.profile;$('#hubName').textContent=UP(p.username||'');
   const pk0=perks(),nb0=nextBelt(p.belt);$('#hubMeta').textContent=`CINTA ${UP(p.belt||'blanco')} · NIVEL ${p.level||1} · ${p.lp||0} LP · ${p.wins||0}V ${p.losses||0}D · +${pk0.hp} HP`+(nb0?` · EXAMEN ${UP(nb0)}: ${beltNeed(nb0)} LP`:'');
-  $('#hubMode').textContent=account.mode==='live'?(saveError||'PROGRESO GUARDADO EN LA NUBE'):'MODO DEMO · GUARDADO EN ESTE DISPOSITIVO';
+  $('#hubMode').textContent=account.mode==='live'?(saveError||'PROGRESO GUARDADO EN LA NUBE'):'PARTIDA LOCAL · CREA UNA CUENTA PARA GUARDAR EN LA NUBE';
   $('#tBuildLabel').textContent=myFighter?'EDITAR LUCHADOR':'CREAR LUCHADOR';
   const pr=progress(),nx=CIRCUIT[Math.min(pr.stage,CIRCUIT.length-1)];
   $('#tCircuitSub').textContent=pr.medals.length>=CIRCUIT.length?'Circuito completo. Eres leyenda.':`${pr.medals.length}/${CIRCUIT.length} medallas · Siguiente: ${nx.name}`}
@@ -1276,12 +1282,12 @@ function openBuilder(){show('s-builder');Snd.theme('title');
     swat('#swSkin',SKIN,'skin');swat('#swHair',HAIRC,'hair');swat('#swRash',RASH,'rash');swat('#swShort',SHORT,'short');swat('#swBand',BANDS.map(b=>b[0]),'band')};
   paint()}
 $('#bBack').onclick=openHub;
-$('#bSave').onclick=async()=>{const nm=$('#fName').value.trim();if(nm.length<2){$('#bMsg').textContent='Ponle nombre a tu luchador (2+ letras).';return}draft.name=nm;
+$('#bSave').onclick=async()=>{const nm=$('#fName').value.trim();if(nm.length<2){$('#bMsg').textContent='Ponle nombre a tu luchador (2+ letras).';return}draft.name=nm;if($('#bSave').disabled)return;$('#bSave').disabled=true;
   try{if(account.mode==='live'){const st=STYLES[draft.style].stats,row={profile_id:account.uid,name:nm,style:draft.style,submission:st.SUB,pressure:st.PRE,gas:st.GAS,speed:st.VEL,rashguard_color:draft.rash,short_color:draft.short,is_active:true};
       row.look={skin:draft.skin,hair:draft.hair,hairStyle:draft.hairStyle,gi:!!draft.gi,band:draft.band||''};
       const q=draft.id?sb.from('fighters').update(row).eq('id',draft.id).select().single():sb.from('fighters').insert(row).select().single();const{data,error}=await q;if(error)throw error;draft.id=data.id;
       await sb.from('profiles').update({rashguard_color:draft.rash,short_color:draft.short}).eq('id',account.uid)}
-    myFighter={...draft};store.set('bjjm_fighter',myFighter);Snd.ok();openMap(true)}catch(e){$('#bMsg').textContent=/duplicate|unique/i.test(e.message)?'Ese nombre ya es de otro luchador. Cada personaje es único: elige otro.':'No se pudo guardar: '+e.message}};
+    myFighter={...draft};store.set('bjjm_fighter',myFighter);Snd.ok();openMap(true)}catch(e){$('#bMsg').textContent=/duplicate|unique/i.test(e.message)?'Ese nombre ya es de otro luchador. Cada personaje es único: elige otro.':'No se pudo guardar: '+e.message}finally{$('#bSave').disabled=false}};
 async function openRank(){show('s-rank');const el=$('#rankBody');el.innerHTML='<p class="sm mute center">Cargando…</p>';let rows=[];
   if(account.mode==='live'){const{data}=await sb.from('leaderboard').select('*').limit(20);rows=data||[]}
   else{const p=account.profile;rows=[{username:'el_rey_rayan',elo:2400,lp:980},{username:'craign_juan',elo:2260,lp:905},{username:'bia_la_patrona',elo:2230,lp:890},{username:'chelo_mariposa',elo:2210,lp:870},{username:p.username,elo:1000,lp:p.lp||0,me:1},{username:'el_espazado',elo:612,lp:0}]}
@@ -1291,18 +1297,18 @@ async function openRank(){show('s-rank');const el=$('#rankBody');el.innerHTML='<
 $('#rBack').onclick=openHub;
 
 /* ---- Arranque ---- */
-function continueAdventure(){myFighter?openMap(true):openBuilder()}
-function refreshTitle(){const active=account.mode!=='guest',returning=store.get('bjjm_returning',false)||store.get('bjjm_trial',false);
-  $('#btnContinue').hidden=!active;$('#homeLogin').hidden=active;$('#homeSignup').hidden=active;
+function continueAdventure(){myFighter&&!(account.mode==='live'&&!myFighter.id)?openMap(true):openBuilder()}
+function refreshTitle(){const active=account.mode!=='guest'||!!myFighter,registered=account.mode!=='guest',returning=store.get('bjjm_returning',false)||store.get('bjjm_trial',false);
+  $('#btnContinue').hidden=!active;$('#homeLogin').hidden=registered;$('#homeSignup').hidden=registered;$('#btnContinue').textContent=registered?'CONTINUAR MI AVENTURA':'CONTINUAR PARTIDA LOCAL';
   $('#btnStart').textContent=active?'COMBATE RAPIDO':returning?'JUGAR COMO INVITADO':'MI PRIMER COMBATE';
   $('#btnContinue').className='btn gold';$('#btnStart').className='btn '+(active||returning?'dark':'gold')+' pix';
-  $('#welcome').textContent=active?'Bienvenido, '+account.profile.username+'. Tu aventura continúa.':returning?'¿Ya jugaste? Entra a tu cuenta y continúa tu aventura.':'Prueba tu primera lucha sin registro. Después crea tu personaje y conquista el circuito.';
+  $('#welcome').textContent=active?'Bienvenido, '+(myFighter?.name||account.profile.username)+'. Tu aventura continúa.':returning?'¿Ya jugaste? Entra a tu cuenta y continúa tu aventura.':'Prueba tu primera lucha sin registro. Después crea tu personaje y conquista el circuito.';
   $('#tip').textContent='TIP DEL PROFE: '+TIPS[(Math.random()*TIPS.length)|0];Snd.theme('title')}
 $('#homeLogin').onclick=()=>openAuth(false);$('#homeSignup').onclick=()=>openAuth(true);
 $('#btnStart').onclick=()=>{Snd.wake();Snd.ok();openSelect()};$('#btnContinue').onclick=continueAdventure;
 (async()=>{const demo=store.get('bjjm_demo',null);if(demo)account={mode:'demo',profile:demo};
   const hash=new URLSearchParams(location.hash.slice(1)),fromMail=hash.has('access_token')||new URLSearchParams(location.search).has('code'),mailErr=hash.get('error_description');
-  try{const c=await sbInit();if(c){const{data:{session}}=await c.auth.getSession();if(session)await loadProfile()}}catch(e){}
+  try{const c=await sbInit();if(c){const{data:{session}}=await c.auth.getSession();if(session){await loadProfile();if(account.mode==='live')await recoverTrial(session.user.email)}}}catch(e){}
   if(fromMail||mailErr)history.replaceState(null,'',location.pathname);
   refreshTitle();
   if(fromMail&&account.mode==='live')continueAdventure();
