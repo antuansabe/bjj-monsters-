@@ -970,8 +970,8 @@ function loop(){fr++;
 let sel={step:'me',me:null,meKey:null,foeKey:null,cur:null};
 const beltHex=b=>(BELTS.find(x=>x[0]===b)||BELTS[0])[1];
 let LEGENDS={};
-async function loadLegends(){if(account.mode!=='live')return;try{const{data}=await sb.from('legends').select('*').limit(6);LEGENDS={};(data||[]).forEach((r,i)=>{if(r.username===account.profile.username)return;
-    const d=customFighter(Object.assign({name:r.name,style:r.style,rash:r.rashguard_color,short:r.short_color},r.look||{}),beltHex(r.belt));d.tag='LEYENDA · '+UP(r.username);d.from='WEB';d.q={intro:'«Ya terminé el circuito. ¿Y tú?»',win:'«Por algo soy leyenda.»',lose:'«Bien. Ya casi estás listo.»'};LEGENDS['lg_'+i]=d})}catch(e){}}
+async function loadLegends(){if(account.mode!=='live')return;try{const{data,error}=await sb.from('profiles').select('username,belt,progress,fighters(name,style,rashguard_color,short_color,look,is_active)').contains('progress',{medals:CIRCUIT.map(t=>t.id)}).limit(6);if(error)return;LEGENDS={};(data||[]).forEach((p,i)=>{if(p.username===account.profile.username)return;const r=(p.fighters||[]).find(f=>f.is_active);if(!r)return;
+    const d=customFighter(Object.assign({name:r.name,style:r.style,rash:r.rashguard_color,short:r.short_color},r.look||{}),beltHex(p.belt));d.tag='LEYENDA · '+UP(p.username);d.from='WEB';d.q={intro:'«Ya terminé las siete medallas. ¿Y tú?»',win:'«Por algo soy leyenda.»',lose:'«Bien. Ya casi estás listo.»'};LEGENDS['lg_'+i]=d})}catch(e){}}
 const defOf=k=>k.startsWith('lg_')?LEGENDS[k]:k==='custom'?customFighter(myFighter,beltHex(account.profile.belt||'blanco')):ROSTER[k];
 function openSelect(){sel={step:'me',me:null,meKey:null,foeKey:null,cur:null};Snd.theme('title');renderSelect()}
 function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',false),me=sel.step==='me'||sel.circuit;sel.cur=null;
@@ -979,7 +979,7 @@ function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',fal
   $('#grid').style.gridTemplateColumns='repeat(4,1fr)';
   const T=sel.circuit?CIRCUIT[circuit.si]:null;
   $('#selTitle').textContent=T?T.name:(me?'ELIGE TU LUCHADOR':'ELIGE A TU RIVAL');
-  $('#selSub').textContent=T?('CON QUIEN VAS A PELEAR EL TORNEO · '+T.fights.length+' COMBATES'):(me?(first?'PRIMER COMBATE GUIADO · CONTRA EL ESPAZADO':TIPS[(Math.random()*TIPS.length)|0]):'EL REY DA +25 LP. EL ESPAZADO… +5.');
+  $('#selSub').textContent=T?('CON QUIEN VAS A PELEAR EL TORNEO · '+T.fights.length+' COMBATES'):(me?(first?'PRIMER COMBATE GUIADO · CONTRA EL ESPAZADO':TIPS[(Math.random()*TIPS.length)|0]):'ELIGE UN RIVAL · GANAR DA 60 XP Y CREDITOS. CADA ESTILO EXIGE OTRA ESTRATEGIA.');
   $('#selBack').textContent=sel.circuit?'VOLVER':(me?'INICIO':'VOLVER');$('#selGo').disabled=true;
   $('#selGo').textContent=T?'EMPEZAR TORNEO':(me&&!first?'ELEGIR RIVAL':'¡OSS! A PELEAR');
   $('#detail').innerHTML='<p class="sm center" style="color:var(--line);margin:auto">Toca un retrato para ver su juego. Las medallas desbloquean nuevos luchadores.</p>';const g=$('#grid');g.innerHTML='';
@@ -1097,9 +1097,9 @@ function gateButtons(mode){const row=$('#gRow'),main=$('#btnSignup');row.innerHT
   if(mode==='stage'){main.textContent='VOLVER AL MAPA';main.className='btn gold';main.onclick=back;add('IR AL MENU','dark',()=>{circuit=null;openHub()});return}
   if(mode==='retry'){main.textContent='REINTENTAR TORNEO';main.className='btn red';main.onclick=()=>{circuit={si:circuit.si,idx:circuit.startAt||0,startAt:circuit.startAt||0,venue:circuit.venue};sel.foeKey=CIRCUIT[circuit.si].fights[circuit.idx];openVS()};
     add('VOLVER AL MAPA','dark',back);return}
-  const guest=account.mode==='guest';main.textContent=guest?'CREAR CUENTA Y GUARDAR':'CONTINUAR AVENTURA';main.className='btn gold';
-  main.onclick=()=>guest?openAuth(true):continueAdventure();
-  if(guest)add('CREAR PERSONAJE LOCAL','dark',openBuilder);
+  const guest=account.mode==='guest';main.textContent=guest&&!myFighter?'CREAR CUENTA Y GUARDAR':'CONTINUAR AVENTURA';main.className='btn gold';
+  main.onclick=()=>guest&&!myFighter?openAuth(true):continueAdventure();
+  if(guest)myFighter?add('CREAR CUENTA Y GUARDAR','gold',()=>openAuth(true)):add('CREAR PERSONAJE LOCAL','dark',openBuilder);
   add('REVANCHA','red',()=>{tapNow();openVS()});sel.fromMap?add('VOLVER AL MAPA','dark',()=>leaveVenue(sel.fromMap)):add('OTRO COMBATE','dark',openSelect)}
 function nextRound(){if(vsStarting)return;circuit.idx++;sel.foeKey=CIRCUIT[circuit.si].fights[circuit.idx];openVS()}
 async function openGate(o){show('s-gate');const won=o.winner==='p',b=$('#gBanner');b.textContent=won?'¡VICTORIA!':'DERROTA';b.className='banner '+(won?'win':'lose');
