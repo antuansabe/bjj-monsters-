@@ -904,7 +904,7 @@ async function recordMatch(o){const won=o.winner==='p',p=account.profile;
       if(error)throw error;if(data){account.profile=data;saveError='';return true}}catch(e){saveError='No se registró el combate en la nube. Revisa tu conexión.';return false}}
   p.lp=Math.max(0,(p.lp||0)+o.lp);won?p.wins++:p.losses++;p.xp=(p.xp||0)+(won?60:20);p.level=1+Math.floor(p.xp/200);
   if(account.mode!=='live')store.set(account.mode==='demo'?'bjjm_demo':'bjjm_guest',p)}
-function perks(){const p=account.profile,b=BELT_PERKS[p.belt||'blanco']||BELT_PERKS.blanco,lv=Math.min(15,(p.level||1)-1);return{hp:b.hp+lv*2+(progress().shop?.owned?.includes('conditioning')?6:0),bag:b.bag||{},cb:b.cb||CHAIN_BONUS,lv}}
+function perks(){const p=account.profile,b=BELT_PERKS[p.belt||'blanco']||BELT_PERKS.blanco,lv=Math.min(15,(p.level||1)-1);return{hp:b.hp+lv*2+(progress().shop?.owned?.includes('conditioning')?6:0)+(progress().shop?.owned?.includes('magic_plant')?2:0),bag:b.bag||{},cb:b.cb||CHAIN_BONUS,lv}}
 
 async function recoverTrial(email){const t=store.get('bjjm_signup_transfer',null);if(!t||t.email!==String(email||'').toLowerCase()||Date.now()-t.created>86400000)return;
   if((account.profile.wins||0)+(account.profile.losses||0)===0&&t.result)await recordMatch(t.result);
@@ -1238,6 +1238,7 @@ function enterVenue(v){if(v.id==='shop'){openShop(v);return}const pr=progress(),
 
 /* ---- Puras Broncas Store: economía PvE, créditos separados de XP ---- */
 const SHOP=[
+ {id:'magic_plant',name:'PLANTAS MAGICAS',cost:60,desc:'Objeto de fantasía. +2 de resistencia máxima permanente. Una compra; no se acumula.'},
  {id:'gi_moss',name:'KIMONO MUSGO',cost:120,desc:'Kimono verde bosque. Se equipa en tu personaje.',look:{gi:true,rash:'#3f7562'}},
  {id:'gi_sunset',name:'KIMONO ATARDECER',cost:180,desc:'Kimono terracota para destacar en el tatami.',look:{gi:true,rash:'#c27656'}},
  {id:'hair_silver',name:'PELO PLATA',cost:100,desc:'Cabello plateado, corte corto.',look:{hair:'#cad7da',hairStyle:'short'}},
@@ -1245,7 +1246,7 @@ const SHOP=[
  {id:'conditioning',name:'ACONDICIONAMIENTO',cost:240,desc:'Mejora permanente: +6 de resistencia máxima en combate.'}
 ];
 const BRONCAS={skin:'#d9a070',hair:'#31251f',style:'bald',mustache:'#31251f',top:'#3f7562',bot:'#243d3d',belt:'#e7bc67'};
-const BRONCAS_QUOTES=['Aquí se viene a fluir, carnal. Puro lifestyle.','¿Buscabas plantas mágicas? Tengo una albahaca que revive con agua. Lifestyle.','Tu mejor skin es llegar a entrenar. Pero este kimono también ayuda.','Sin broncas, sin prisa. Posición antes que sumisión, campeón.'];
+const BRONCAS_QUOTES=['Aquí se viene a fluir, carnal. Puro lifestyle.','¿Plantas mágicas? Esta macetita da +2 de resistencia. Puro lifestyle de videojuego.','Tu mejor skin es llegar a entrenar. Pero este kimono también ayuda.','Sin broncas, sin prisa. Posición antes que sumisión, campeón.'];
 let shopVenue=null,shopBusy=false;
 function wallet(){const pr=progress();if(!pr.shop)pr.shop={spent:0,owned:[]};return pr.shop}
 function credits(){return Math.max(0,(account.profile.xp||0)+(progress().bonusCredits||0)-(wallet().spent||0))}

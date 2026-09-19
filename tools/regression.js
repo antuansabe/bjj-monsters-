@@ -52,3 +52,9 @@ console.log('OK: sintaxis, acciones legales, cadenas, inventario, fin de combate
  harness.fail();await harness.buyItem({id:'band',cost:80,look:{band:'#69c9b4'}});assert.equal(harness.get().spent,120);assert.ok(!harness.get().owned.includes('band'));
  console.log('OK: compra, equipamiento gratuito y reversión por fallo de guardado.');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+const perkSource=between('function perks()','async function recoverTrial');
+const perkProfile={level:1,belt:'blanco',progress:{shop:{owned:[]}}};
+const getPerks=new Function('account','progress','BELT_PERKS','CHAIN_BONUS',perkSource+';return perks;')({profile:perkProfile},()=>perkProfile.progress,{blanco:{hp:0,bag:{}}},12);
+assert.equal(getPerks().hp,0);perkProfile.progress.shop.owned=['magic_plant'];assert.equal(getPerks().hp,2);perkProfile.progress.shop.owned.push('magic_plant');assert.equal(getPerks().hp,2);perkProfile.progress.shop.owned.push('conditioning');assert.equal(getPerks().hp,8);
+console.log('OK: planta +2 HP, no acumulable, compatible con acondicionamiento.');
