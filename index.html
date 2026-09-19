@@ -201,9 +201,11 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
   <h1 class="logo pix"><b>BJJ</b><span>MONSTERS</span></h1>
   <canvas id="titleCv" width="160" height="96" aria-hidden="true"></canvas>
   <div class="stack" style="width:100%">
-    <p class="xs" id="tip"></p>
+    <p class="sm center" id="welcome">Tu primera lucha. Tu propio personaje. Todo un circuito por conquistar.</p><p class="xs" id="tip"></p>
     <button class="btn gold blink pix" id="btnStart" style="font-size:13px;min-height:60px;animation-duration:1.4s">TOCA PARA PELEAR</button>
     <button class="btn dark sm" id="btnContinue" hidden>CONTINUAR MI AVENTURA</button>
+    <div class="row"><button class="btn dark sm" id="homeLogin">ENTRAR A MI CUENTA</button><button class="btn sm" id="homeSignup">CREAR CUENTA</button></div>
+    <p class="xs center mute">1. Prueba un combate · 2. Crea tu personaje · 3. Conquista el mapa</p>
     <p class="credit">Hecho con <span style="color:var(--red)">&hearts;</span> por <a id="creditLink" href="https://github.com/antuansabe" target="_blank" rel="noopener">Antonio Fernández</a></p>
   </div>
 </section>
@@ -324,12 +326,12 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
   <button class="btn dark" id="rBack">VOLVER</button>
 </section>
 
-<div class="modal" id="modal"><div class="box stack">
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="box stack">
   <div id="mTitle" style="font-size:11px">CREAR CUENTA</div>
   <div id="mUserWrap"><label for="aUser">USUARIO</label><input id="aUser" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
   <div><label for="aMail">EMAIL</label><input id="aMail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false"></div>
   <div><label for="aPass">CONTRASENA (6+)</label><input id="aPass" type="password" autocomplete="new-password"></div>
-  <p class="msg" id="aMsg"></p>
+  <p class="msg" id="aMsg" role="status" aria-live="polite"></p>
   <button class="btn gold" id="aGo">CREAR CUENTA</button>
   <button class="btn sm" id="aToggle">YA TENGO CUENTA</button>
   <button class="btn dark sm" id="aClose">AHORA NO</button>
@@ -847,7 +849,7 @@ async function sbInit(){if(!CONFIG.SUPABASE_URL||!CONFIG.SUPABASE_ANON_KEY||sbDo
   try{await loadScript(CONFIG.SUPABASE_JS);sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);return sb}
   catch(e){sbDown=true;return null}}
 async function loadProfile(){const{data:{user}}=await sb.auth.getUser();if(!user)return false;const{data:p}=await sb.from('profiles').select('*').eq('id',user.id).single();if(!p)return false;account={mode:'live',profile:p,uid:user.id};
-  const{data:f}=await sb.from('fighters').select('*').eq('profile_id',user.id).eq('is_active',true).maybeSingle();if(f)myFighter=Object.assign({id:f.id,name:f.name,style:f.style,rash:f.rashguard_color,short:f.short_color},f.look||{});return true}
+  const{data:f}=await sb.from('fighters').select('*').eq('profile_id',user.id).eq('is_active',true).maybeSingle();myFighter=f?Object.assign({id:f.id,name:f.name,style:f.style,rash:f.rashguard_color,short:f.short_color},f.look||{}):null;store.set('bjjm_returning',true);return true}
 async function recordMatch(o){const won=o.winner==='p',p=account.profile;
   if(account.mode==='live'){try{const{data,error}=await sb.rpc('record_pve_match',{p_npc:o.foe,p_won:won,p_result:o.by==='exhaust'?'submission':o.by,p_technique:o.tech||null,p_position:o.pos,p_turns:o.turns,p_points:o.pp,p_opp_points:o.ep});
       if(!error&&data){account.profile=data;return}}catch(e){}}
@@ -880,7 +882,7 @@ function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',fal
   $('#grid').style.gridTemplateColumns='repeat(4,1fr)';
   const T=sel.circuit?CIRCUIT[circuit.si]:null;
   $('#selTitle').textContent=T?T.name:(me?'ELIGE TU LUCHADOR':'ELIGE A TU RIVAL');
-  $('#selSub').textContent=T?('CON QUIEN VAS A PELEAR EL TORNEO · '+T.fights.length+' COMBATES'):(me?(first?'TU PRIMER RIVAL: EL REY RAYAN':TIPS[(Math.random()*TIPS.length)|0]):'EL REY DA +25 LP. EL ESPAZADO… +5.');
+  $('#selSub').textContent=T?('CON QUIEN VAS A PELEAR EL TORNEO · '+T.fights.length+' COMBATES'):(me?(first?'PRIMER COMBATE GUIADO · CONTRA EL ESPAZADO':TIPS[(Math.random()*TIPS.length)|0]):'EL REY DA +25 LP. EL ESPAZADO… +5.');
   $('#selBack').textContent=sel.circuit?'VOLVER':(me?'INICIO':'VOLVER');$('#selGo').disabled=true;
   $('#selGo').textContent=T?'EMPEZAR TORNEO':(me&&!first?'ELEGIR RIVAL':'¡OSS! A PELEAR');
   $('#detail').innerHTML='<p class="sm center" style="color:var(--line);margin:auto">Toca un retrato para ver su juego.</p>';const g=$('#grid');g.innerHTML='';
@@ -894,7 +896,7 @@ function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',fal
 $('#selBack').onclick=()=>{if(sel.circuit){const v=circuit&&circuit.venue;circuit=null;v?enterVenue(v):openMap()}else if(sel.fromMap&&sel.step==='me'){enterVenue(sel.fromMap)}else if(sel.step==='foe'){sel.step='me';renderSelect()}else{show('s-title');refreshTitle()}};
 $('#selGo').onclick=()=>{if(!sel.cur)return;Snd.ok();const first=!store.get('bjjm_trial',false);
   if(sel.circuit){sel.meKey=sel.cur;sel.me=defOf(sel.cur);sel.foeKey=CIRCUIT[circuit.si].fights[0];circuit.idx=0;openVS();return}
-  if(sel.step==='me'){sel.meKey=sel.cur;sel.me=defOf(sel.cur);if(first){sel.foeKey='ryker';openVS()}else{sel.step='foe';renderSelect()}}else{sel.foeKey=sel.cur;openVS()}};
+  if(sel.step==='me'){sel.meKey=sel.cur;sel.me=defOf(sel.cur);if(first){sel.foeKey='spaz';openVS()}else{sel.step='foe';renderSelect()}}else{sel.foeKey=sel.cur;openVS()}};
 
 /* ---- VS ---- */
 let tapRes=null,skip=false;
@@ -989,6 +991,7 @@ function gateButtons(mode){const row=$('#gRow'),main=$('#btnSignup');row.innerHT
     add('VOLVER AL MAPA','dark',back);return}
   const guest=account.mode==='guest';main.textContent=guest?'CREAR CUENTA Y GUARDAR':'IR AL HUB';main.className='btn gold';
   main.onclick=()=>guest?openAuth(true):openHub();
+  if(guest)add('CREAR PERSONAJE LOCAL','dark',openBuilder);
   add('REVANCHA','red',()=>{tapNow();openVS()});sel.fromMap?add('VOLVER AL MAPA','dark',()=>leaveVenue(sel.fromMap)):add('OTRO COMBATE','dark',openSelect)}
 function nextRound(){circuit.idx++;sel.foeKey=CIRCUIT[circuit.si].fights[circuit.idx];openVS()}
 async function openGate(o){show('s-gate');const won=o.winner==='p',b=$('#gBanner');b.textContent=won?'¡VICTORIA!':'DERROTA';b.className='banner '+(won?'win':'lose');
@@ -1014,20 +1017,23 @@ drawFace($('#gFace').getContext('2d'),FOE.pal,won?'#4a5a6a':'#9a2a20');
 $('#s-gate').addEventListener('click',e=>{if(!e.target.closest('button'))tapNow()});
 
 let signup=true;
-function openAuth(su){signup=su;$('#modal').classList.add('on');$('#mTitle').textContent=su?'CREAR CUENTA':'ENTRAR';$('#aGo').textContent=su?'CREAR CUENTA':'ENTRAR';$('#aToggle').textContent=su?'YA TENGO CUENTA':'QUIERO CREAR CUENTA';
-  $('#mUserWrap').hidden=!su;$('#aPass').autocomplete=su?'new-password':'current-password';$('#aMsg').textContent=(CONFIG.SUPABASE_URL&&!sbDown)?'':'MODO DEMO: sin conexion al servidor, tu cuenta se guarda solo en este dispositivo.'}
-$('#aToggle').onclick=()=>openAuth(!signup);$('#aClose').onclick=()=>$('#modal').classList.remove('on');
+function openAuth(su){if(!$('#modal').classList.contains('on'))authReturn=document.activeElement;signup=su;setTimeout(()=>$(su?'#aUser':'#aMail').focus(),0);$('#modal').classList.add('on');$('#mTitle').textContent=su?'CREAR CUENTA':'ENTRAR';$('#aGo').textContent=su?'CREAR CUENTA':'ENTRAR';$('#aToggle').textContent=su?'YA TENGO CUENTA':'QUIERO CREAR CUENTA';
+  $('#mUserWrap').hidden=!su;$('#aPass').autocomplete=su?'new-password':'current-password';$('#aMsg').textContent=(CONFIG.SUPABASE_URL&&!sbDown)?'':'Sin conexión. Puedes seguir jugando como invitado y volver a intentar el registro después.'}
+$('#aToggle').onclick=()=>openAuth(!signup);let authReturn=null;
+function closeAuth(){$('#modal').classList.remove('on');$('#aPass').value='';authReturn?.focus()}
+$('#aClose').onclick=closeAuth;
+$('#modal').addEventListener('keydown',e=>{if(e.key==='Escape')closeAuth();if(e.key==='Enter'&&e.target.tagName==='INPUT')$('#aGo').click();if(e.key==='Tab'){const a=[...$('#modal').querySelectorAll('input,button')].filter(x=>!x.disabled&&x.getClientRects().length),first=a[0],last=a[a.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
 $('#aGo').onclick=async()=>{const user=$('#aUser').value.trim(),mail=$('#aMail').value.trim(),pass=$('#aPass').value,msg=$('#aMsg');
   if(signup&&!/^[A-Za-z0-9_]{3,20}$/.test(user)){msg.textContent='Usuario: 3 a 20 letras, números o _';return}
   if(!/^\S+@\S+\.\S+$/.test(mail)){msg.textContent='Escribe un email válido.';return}
   if(pass.length<6){msg.textContent='La contraseña necesita 6 caracteres o más.';return}
   $('#aGo').disabled=true;msg.textContent='Conectando…';
   try{const c=await sbInit();
-    if(!c){const g=account.profile;account={mode:'demo',profile:{username:user||mail.split('@')[0],lp:g.lp||0,wins:g.wins||0,losses:g.losses||0,belt:'blanco',level:1}};store.set('bjjm_demo',account.profile)}
-    else{const r=signup?await c.auth.signUp({email:mail,password:pass,options:{data:{username:user},emailRedirectTo:location.origin+location.pathname}}):await c.auth.signInWithPassword({email:mail,password:pass});if(r.error)throw r.error;
+    if(!c)throw new Error('Servidor no disponible. Tu partida local sigue guardada.');
+    {const r=signup?await c.auth.signUp({email:mail,password:pass,options:{data:{username:user},emailRedirectTo:location.origin+location.pathname}}):await c.auth.signInWithPassword({email:mail,password:pass});if(r.error)throw r.error;
       if(!r.data.session){openAuth(false);msg.textContent='Te enviamos un correo. Abre el enlace desde este mismo teléfono y entrarás directo al juego.';return}
-      await loadProfile();if(signup&&pending)await recordMatch(pending)}
-    $('#modal').classList.remove('on');Snd.ok();openHub()}
+      if(!await loadProfile())throw new Error('No pudimos cargar tu perfil. Intenta entrar otra vez.');if(signup&&pending){await recordMatch(pending);pending=null}}
+    $('#modal').classList.remove('on');$('#aPass').value='';Snd.ok();continueAdventure()}
   catch(e){msg.textContent=/already|registered/i.test(e.message)?'Ese email ya tiene cuenta. Toca «Ya tengo cuenta».':/Invalid login/i.test(e.message)?'Email o contraseña incorrectos.':/duplicate|unique/i.test(e.message)?'Ese usuario ya existe. Prueba otro.':/rate/i.test(e.message)?'Demasiados intentos. Espera un minuto.':'No se pudo conectar: '+e.message}
   finally{$('#aGo').disabled=false}};
 
@@ -1181,7 +1187,7 @@ function openHub(){show('s-hub');loadLegends();Snd.theme('title');const p=accoun
   const pr=progress(),nx=CIRCUIT[Math.min(pr.stage,CIRCUIT.length-1)];
   $('#tCircuitSub').textContent=pr.medals.length>=CIRCUIT.length?'Circuito completo. Eres leyenda.':`${pr.medals.length}/${CIRCUIT.length} medallas · Siguiente: ${nx.name}`}
 $('#tQuick').onclick=()=>{circuit=null;openSelect()};$('#tBuild').onclick=openBuilder;$('#tRank').onclick=openRank;$('#tCircuit').onclick=()=>openMap(true);
-$('#btnLogout').onclick=async()=>{if(account.mode==='live'&&sb)await sb.auth.signOut();store.del('bjjm_demo');account={mode:'guest',profile:store.get('bjjm_guest',{...GUEST0})};show('s-title');refreshTitle()};
+$('#btnLogout').onclick=async()=>{if(account.mode==='live'&&sb)await sb.auth.signOut();store.del('bjjm_demo');myFighter=null;store.del('bjjm_fighter');account={mode:'guest',profile:store.get('bjjm_guest',{...GUEST0})};show('s-title');refreshTitle()};
 const RASH=['#e0483c','#3b7dd8','#2fa86a','#f6c744','#8a4fc2','#14151f','#f4f4e4','#ff7ab0'],SHORT=['#14151f','#f4f4e4','#b3261a','#3b3f8a','#4a5a3a'];
 let draft=null;
 const SKIN=['#f0c8a0','#d9a070','#b07a4e','#8a5a3a','#6a4028','#e8c49a'],HAIRC=['#1f1610','#4a2c18','#8a5a2a','#e8d070','#b8b0a8','#e0483c','#4fe0ff'],
@@ -1189,7 +1195,7 @@ const SKIN=['#f0c8a0','#d9a070','#b07a4e','#8a5a3a','#6a4028','#e8c49a'],HAIRC=[
       BANDS=[['','SIN BANDA'],['#e0483c','ROJA'],['#f6c744','AMARILLA'],['#14151f','NEGRA'],['#4fe0ff','AZUL']];
 function openBuilder(){show('s-builder');Snd.theme('title');
   draft=Object.assign({name:'',style:'guardero',rash:RASH[0],short:SHORT[0],skin:SKIN[1],hair:HAIRC[0],hairStyle:'short',gi:false,band:''},myFighter||{});
-  $('#fName').value=draft.name;$('#bMsg').textContent='';
+  $('#fName').value=draft.name;$('#bMsg').textContent=myFighter?'Personaliza tu estilo. Tu cinta se gana entrenando.':'Paso 2: ponle nombre, elige tu estilo y tu look. Después vamos al mapa.';
   const cb=account.profile.belt||'blanco';
   $('#belts').innerHTML=BELTS.map(([k,c])=>`<i class="${k===cb?'on':''}" style="background:${c}" title="${k}"></i>`).join('');
   const swat=(q,arr,key)=>{const w=$(q);w.innerHTML='';arr.forEach(col=>{const b=document.createElement('button');b.className='sw';
@@ -1211,7 +1217,7 @@ $('#bSave').onclick=async()=>{const nm=$('#fName').value.trim();if(nm.length<2){
       row.look={skin:draft.skin,hair:draft.hair,hairStyle:draft.hairStyle,gi:!!draft.gi,band:draft.band||''};
       const q=draft.id?sb.from('fighters').update(row).eq('id',draft.id).select().single():sb.from('fighters').insert(row).select().single();const{data,error}=await q;if(error)throw error;draft.id=data.id;
       await sb.from('profiles').update({rashguard_color:draft.rash,short_color:draft.short}).eq('id',account.uid)}
-    myFighter=draft;store.set('bjjm_fighter',myFighter);Snd.ok();openHub()}catch(e){$('#bMsg').textContent=/duplicate|unique/i.test(e.message)?'Ese nombre ya es de otro luchador. Cada personaje es único: elige otro.':'No se pudo guardar: '+e.message}};
+    myFighter={...draft};store.set('bjjm_fighter',myFighter);Snd.ok();openMap(true)}catch(e){$('#bMsg').textContent=/duplicate|unique/i.test(e.message)?'Ese nombre ya es de otro luchador. Cada personaje es único: elige otro.':'No se pudo guardar: '+e.message}};
 async function openRank(){show('s-rank');const el=$('#rankBody');el.innerHTML='<p class="sm mute center">Cargando…</p>';let rows=[];
   if(account.mode==='live'){const{data}=await sb.from('leaderboard').select('*').limit(20);rows=data||[]}
   else{const p=account.profile;rows=[{username:'el_rey_rayan',elo:2400,lp:980},{username:'craign_juan',elo:2260,lp:905},{username:'bia_la_patrona',elo:2230,lp:890},{username:'chelo_mariposa',elo:2210,lp:870},{username:p.username,elo:1000,lp:p.lp||0,me:1},{username:'el_espazado',elo:612,lp:0}]}
@@ -1221,14 +1227,21 @@ async function openRank(){show('s-rank');const el=$('#rankBody');el.innerHTML='<
 $('#rBack').onclick=openHub;
 
 /* ---- Arranque ---- */
-function refreshTitle(){$('#btnContinue').hidden=account.mode==='guest';$('#tip').textContent='TIP DEL PROFE: '+TIPS[(Math.random()*TIPS.length)|0];Snd.theme('title')}
-$('#btnStart').onclick=()=>{Snd.wake();Snd.ok();openSelect()};$('#btnContinue').onclick=openHub;
+function continueAdventure(){myFighter?openMap(true):openBuilder()}
+function refreshTitle(){const active=account.mode!=='guest',returning=store.get('bjjm_returning',false)||store.get('bjjm_trial',false);
+  $('#btnContinue').hidden=!active;$('#homeLogin').hidden=active;$('#homeSignup').hidden=active;
+  $('#btnStart').textContent=active?'COMBATE RAPIDO':returning?'JUGAR COMO INVITADO':'MI PRIMER COMBATE';
+  $('#btnContinue').className='btn gold';$('#btnStart').className='btn '+(active||returning?'dark':'gold')+' pix';
+  $('#welcome').textContent=active?'Bienvenido, '+account.profile.username+'. Tu aventura continúa.':returning?'¿Ya jugaste? Entra a tu cuenta y continúa tu aventura.':'Prueba tu primera lucha sin registro. Después crea tu personaje y conquista el circuito.';
+  $('#tip').textContent='TIP DEL PROFE: '+TIPS[(Math.random()*TIPS.length)|0];Snd.theme('title')}
+$('#homeLogin').onclick=()=>openAuth(false);$('#homeSignup').onclick=()=>openAuth(true);
+$('#btnStart').onclick=()=>{Snd.wake();Snd.ok();openSelect()};$('#btnContinue').onclick=continueAdventure;
 (async()=>{const demo=store.get('bjjm_demo',null);if(demo)account={mode:'demo',profile:demo};
   const hash=new URLSearchParams(location.hash.slice(1)),fromMail=hash.has('access_token')||new URLSearchParams(location.search).has('code'),mailErr=hash.get('error_description');
   try{const c=await sbInit();if(c){const{data:{session}}=await c.auth.getSession();if(session)await loadProfile()}}catch(e){}
   if(fromMail||mailErr)history.replaceState(null,'',location.pathname);
   refreshTitle();
-  if(fromMail&&account.mode==='live'){openHub();$('#hubMode').textContent='CORREO CONFIRMADO. BIENVENIDO AL CIRCUITO.'}
+  if(fromMail&&account.mode==='live')continueAdventure();
   else if(mailErr){openAuth(false);$('#aMsg').textContent='El enlace del correo ya no sirve ('+mailErr+'). Entra con tu correo y contraseña, o crea la cuenta de nuevo.'}
   // PWA: se activa solo si sw.js existe en tu dominio (Vercel). En otros hosts se ignora.
   try{const r=await fetch('sw.js',{method:'HEAD'});if(r.ok&&'serviceWorker'in navigator){const l=document.createElement('link');l.rel='manifest';l.href='manifest.webmanifest';document.head.appendChild(l);navigator.serviceWorker.register('sw.js')}}catch(e){}})();
