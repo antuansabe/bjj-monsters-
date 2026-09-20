@@ -1,0 +1,22 @@
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path');
+const h=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const slice=(a,b)=>h.slice(h.indexOf(a),h.indexOf(b,h.indexOf(a)));
+const E=new Function(slice('/*ENGINE-START','/*ENGINE-END*/')+';return{ROSTER,PLAYABLE,newMatch,useItem,avail,setPos,chance,U};')();
+const moi=E.ROSTER.don_moi;
+assert.equal(moi.pal.belt,'#8a4fc2');assert.equal(moi.pal.skin,'#8a5a3a');assert.ok(E.PLAYABLE.includes('don_moi'));
+const unlock=new Function('account','PLAYABLE',slice('const CIRCUIT=','async function saveProgress')+';return unlockedFighters;')({profile:{progress:{medals:[]}}},E.PLAYABLE);
+assert.ok(unlock().includes('don_moi'),'Seleccionable sin medallas');assert.equal(new Set(unlock()).size,unlock().length);
+let s=E.newMatch(moi,E.ROSTER.chelo);assert.equal(s.bag.porrosetamol,1);
+s.p.hp-=50;s.p.sta-=50;const hp=s.p.hp,sta=s.p.sta;E.useItem(s,'porrosetamol');assert.equal(s.p.hp,hp+30);assert.equal(s.p.sta,sta+35);assert.equal(s.bag.porrosetamol,0);
+let before=JSON.stringify(s);assert.deepEqual(E.useItem(s,'porrosetamol'),[]);assert.equal(JSON.stringify(s),before);
+s=E.newMatch(moi,E.ROSTER.chelo);s.p.hp-=2;s.p.sta-=2;E.useItem(s,'porrosetamol');assert.equal(s.p.hp,s.p.maxHp);assert.equal(s.p.sta,s.p.maxSta);
+const ordinary=E.newMatch(E.ROSTER.chelo,moi);before=JSON.stringify(ordinary);E.useItem(ordinary,'porrosetamol');assert.equal(JSON.stringify(ordinary),before,'Otro personaje no recibe el objeto');
+s=E.newMatch(moi,E.ROSTER.chelo);s.over={winner:'p'};before=JSON.stringify(s);E.useItem(s,'porrosetamol');assert.equal(JSON.stringify(s),before);
+// Comparamos contra sus mismas estadísticas sin rasgos para aislar cada ventaja.
+s=E.newMatch(moi,E.ROSTER.chelo);const neutral=E.newMatch({...moi,traits:{}},E.ROSTER.chelo);
+for(const state of [s,neutral])E.setPos(state,'p','HALF:top');const pass=E.U.find(m=>m.id==='half_pass');assert.equal(E.chance(s,'p',pass)-E.chance(neutral,'p',pass),6);
+for(const state of [s,neutral])E.setPos(state,'p','BACK:top');const rnc=E.U.find(m=>m.id==='rnc');assert.equal(E.chance(s,'p',rnc)-E.chance(neutral,'p',rnc),8);
+for(const state of [s,neutral])E.setPos(state,'p','GUARD:bottom');const sweep=E.U.find(m=>m.to&&m.from.includes('GUARD:bottom')&&m.ch<100);assert.equal(E.chance(s,'p',sweep)-E.chance(neutral,'p',sweep),-12);
+for(const state of [s,neutral])E.setPos(state,'p','GUARD:top');const armbar=E.U.find(m=>m.id==='armbar_g');assert.equal(E.chance(s,'e',armbar)-E.chance(neutral,'e',armbar),8);
+const special=s.p.moves.find(m=>m.special);assert.equal(special.n,'ABRAZO DE DON MOI');assert.deepEqual(special.from,['BACK:top']);
+console.log('OK: Don Moi inicial, Porrosetamol limitado, pases, espalda y debilidad en guardia cerrada.');

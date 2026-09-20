@@ -65,3 +65,15 @@ Después de tocar números, corre el simulador para no romper el balance:
 ```bash
 node tools/sim.js
 ```
+
+## Don Moi
+
+`don_moi` está disponible sin medallas y conserva su lugar entre los personajes iniciales sin cambiar los desbloqueos existentes. Piel morena, kimono crema y cinta morada; HP base 104.
+
+- Pases desde guardia/media guardia: +6 puntos de probabilidad.
+- Sumisiones desde espalda dominante: +8 puntos. Especial: **Abrazo de Don Moi**, basado en Mata León y sujeto a carga y posición.
+- Guardia cerrada (`GUARD`): −12 puntos a sus sumisiones y transiciones no garantizadas; las sumisiones rivales ganan +8. En sus pases desde guardia cerrada se combinan el bonus de pase y la penalización. Se respetan los límites generales de probabilidad del motor.
+- Mochila exclusiva: una unidad de **Porrosetamol**, objeto ficticio, recupera hasta 30 HP y 35 STA, sin superar los máximos. Consume el turno habitual de mochila. En torneos, el inventario restante se conserva entre rondas; no se repone por avanzar.
+
+Pruebas: `node tools/don-moi-test.js` y `node tools/sim.js 500`.
+Simulación de esta incorporación, 500 combates por cruce con estrategia automática y mochila: 29% de victorias frente a Rayan, 54% frente a Yugo, 49% frente a Bia, 51% frente a Kolya y 54% frente a Luana. La simulación general usa aleatoriedad: los porcentajes varían entre ejecuciones.

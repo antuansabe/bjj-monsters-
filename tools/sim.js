@@ -3,6 +3,7 @@
 require('./regression.js');
 require('./campaign-test.js');
 require('./special-test.js');
+require('./don-moi-test.js');
 require('./campaign-balance.js');
 const fs=require('fs'),path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
@@ -12,7 +13,7 @@ const{U,SIG,ROSTER,PLAYABLE,newMatch,resolve,aiPick,upkeep,avail,usable,useItem}
 const N=parseInt(process.argv[2]||'1500',10);
 function play(pk,ek,smart){const S=newMatch(ROSTER[pk],ROSTER[ek]);
   while(!S.over){
-    if(smart){ if(S.p.hp<45&&S.bag.acai>0)useItem(S,'acai'); else if(S.p.sta<20&&S.bag.electro>0)useItem(S,'electro'); else resolve(S,'p',aiPick(S,'p',12)) }
+    if(smart){ if(S.bag.porrosetamol>0&&S.p.hp<=S.p.maxHp-25&&S.p.sta<=S.p.maxSta-30)useItem(S,'porrosetamol'); else if(S.p.hp<45&&S.bag.acai>0)useItem(S,'acai'); else if(S.p.sta<20&&S.bag.electro>0)useItem(S,'electro'); else resolve(S,'p',aiPick(S,'p',12)) }
     else{const ms=avail(S,'p').filter(x=>usable(S,'p',x));resolve(S,'p',ms[Math.floor(Math.random()*ms.length)])}
     if(!S.over)resolve(S,'e',aiPick(S,'e'));if(!S.over)upkeep(S)}
   return S}
