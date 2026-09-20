@@ -42,7 +42,7 @@ console.log('OK: sintaxis, acciones legales, cadenas, inventario, fin de combate
 (async()=>{
  const source=between('async function buyItem(item)',"$('#shopBack')");
  const harness=new Function('source',`
-   let account={mode:'guest'},myFighter={rash:'#e0483c'},shopBusy=false,saveError='',fail=false;
+   let account={mode:'guest'},myFighter={rash:'#e0483c'},shopBusy=false,shopFeedbackId=null,saveError='',fail=false;
    const pr={shop:{spent:0,owned:[]}},msg={textContent:''};
    const wallet=()=>pr.shop,credits=()=>240-pr.shop.spent,progress=()=>pr;
    const renderShop=()=>{},$=()=>msg,store={set(){}},Snd={ok(){}};
@@ -61,3 +61,13 @@ const perkProfile={level:1,belt:'blanco',progress:{shop:{owned:[]}}};
 const getPerks=new Function('account','progress','BELT_PERKS','CHAIN_BONUS',perkSource+';return perks;')({profile:perkProfile},()=>perkProfile.progress,{blanco:{hp:0,bag:{}}},12);
 assert.equal(getPerks().hp,0);perkProfile.progress.shop.owned=['magic_plant'];assert.equal(getPerks().hp,2);perkProfile.progress.shop.owned.push('magic_plant');assert.equal(getPerks().hp,2);perkProfile.progress.shop.owned.push('conditioning');assert.equal(getPerks().hp,8);
 console.log('OK: planta +2 HP, no acumulable, compatible con acondicionamiento.');
+// Estados visibles de la tienda: precio, saldo, equipamiento y requisitos.
+const shopProfile={xp:120},shopWallet={owned:[],spent:0},shopFighter={gi:true,rash:'#3f7562'};
+const shopState=new Function('wallet','credits','myFighter','shopBusy',between('function shopItemState(item)','function renderShop()')+';return shopItemState;')(()=>shopWallet,()=>shopProfile.xp-shopWallet.spent,shopFighter,false);
+const moss={id:'moss',cost:120,look:{gi:true,rash:'#3f7562'}};
+assert.equal(shopState(moss).label,'COMPRAR Y EQUIPAR · 120 CREDITOS');
+shopWallet.owned.push('moss');shopWallet.spent=120;assert.equal(shopState(moss).label,'EQUIPADO');assert.equal(shopState(moss).disabled,true);
+shopFighter.rash='#c27656';assert.equal(shopState(moss).label,'EQUIPAR · GRATIS');assert.equal(shopState(moss).disabled,false,'Reequipar no requiere saldo');
+assert.match(shopState({id:'hair',cost:100,look:{hair:'#fff'}}).hint,/Te faltan 100/);
+shopWallet.owned.push('plant');assert.equal(shopState({id:'plant',cost:60}).label,'MEJORA ACTIVA');
+console.log('OK: estados de tienda, coste visible, equipado, reequipamiento gratis y créditos faltantes.');

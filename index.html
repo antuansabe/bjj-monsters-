@@ -210,6 +210,16 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
 #shopItems .btn:disabled{opacity:.75}
 #s-shop .btn small{display:block;font-size:18px;line-height:1.5}
 #shopMsg{color:var(--gold);line-height:1.5}
+.shop-help{margin:0;font-size:18px;line-height:1.5}
+.shop-help summary{cursor:pointer;color:var(--gold);padding:8px 0}
+.shop-help ol{margin:6px 0;padding-left:24px}.shop-help li+li{margin-top:8px}
+.shop-card{display:grid;gap:10px;padding:14px;background:var(--panel);border:2px solid #515877;border-radius:8px;min-width:0}
+.shop-card h3{margin:0;font-size:23px;color:var(--gold);line-height:1.35;overflow-wrap:anywhere}
+.shop-card p{margin:0;font-size:18px;line-height:1.5;overflow-wrap:anywhere}
+.shop-card .shop-state{color:#c1d8f0}.shop-card .shop-feedback{color:var(--gold)}
+.shop-feedback:empty,#shopMsg:empty{display:none}
+.shop-card .btn{width:100%;font-size:19px}
+
 #s-hub{overflow-y:auto}#s-hub .grow{flex-shrink:0}#s-venue{overflow-y:auto}#s-venue #vCv{max-height:30vh;object-fit:contain}
 @media(max-height:700px){.logo b{font-size:30px}.logo span{font-size:16px;margin-top:8px}#tip{min-height:24px;font-size:15px}#s-title .xs{font-size:14px}#titleCv{max-height:24vh}#welcome{font-size:16px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}#screen::after{background:none}}
@@ -304,7 +314,13 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
   <h2 class="pix">PURAS BRONCAS STORE</h2>
   <div class="box result"><canvas id="shopFace" width="24" height="24" aria-label="Don Broncas, calvo y con bigote"></canvas><p class="sm" id="shopQuote"></p></div>
   <p class="sm center" id="shopBalance"></p>
-  <p class="xs center mute">Gana 60 créditos por victoria y 20 por participar. Comprar no reduce tu nivel.</p>
+  <p class="shop-help">Usa créditos del juego: ganas 60 por victoria y 20 por derrota. Tu XP y tu nivel se conservan al comprar.</p>
+  <details class="shop-help" open><summary>COMO COMPRAR Y EQUIPAR</summary><ol>
+    <li>El precio aparece en cada botón. Tócalo para descontar esos créditos una sola vez.</li>
+    <li>La ropa y los peinados se compran y equipan en tu personaje al instante. Cambian su apariencia, no sus estadísticas.</li>
+    <li>Para volver a usar algo adquirido, toca <strong>EQUIPAR · GRATIS</strong>. Cambiar de kimono o peinado reemplaza el actual; conservas lo comprado.</li>
+    <li>Las plantas y el acondicionamiento se activan solos para los siguientes combates. No necesitas equiparlos.</li>
+  </ol></details>
   <div id="shopItems"></div>
   <p class="msg" id="shopMsg" role="status"></p>
   <button class="btn dark" id="shopBack">VOLVER AL MAPA</button>
@@ -1302,19 +1318,30 @@ const SHOP=[
 ];
 const BRONCAS={skin:'#d9a070',hair:'#31251f',style:'bald',mustache:'#31251f',top:'#3f7562',bot:'#243d3d',belt:'#e7bc67'};
 const BRONCAS_QUOTES=['Aquí se viene a fluir, carnal. Puro lifestyle.','¿Plantas mágicas? Esta macetita da +2 de resistencia. Puro lifestyle de videojuego.','Tu mejor skin es llegar a entrenar. Pero este kimono también ayuda.','Sin broncas, sin prisa. Posición antes que sumisión, campeón.'];
-let shopVenue=null,shopBusy=false;
+let shopVenue=null,shopBusy=false,shopFeedbackId=null;
 function wallet(){const pr=progress();if(!pr.shop)pr.shop={spent:0,owned:[]};return pr.shop}
 function credits(){return Math.max(0,(account.profile.xp||0)+(progress().bonusCredits||0)-(wallet().spent||0))}
-function openShop(v){shopVenue=v;show('s-shop');Snd.theme('title');drawFace($('#shopFace').getContext('2d'),BRONCAS,'#385c58');$('#shopQuote').textContent=BRONCAS_QUOTES[Math.floor(Math.random()*BRONCAS_QUOTES.length)];$('#shopMsg').textContent='';renderShop()}
-function renderShop(){const w=wallet();$('#shopBalance').textContent=credits()+' CREDITOS · NIVEL '+(account.profile.level||1);const list=$('#shopItems');list.innerHTML='';
-  SHOP.forEach(item=>{const owned=w.owned.includes(item.id),b=document.createElement('button');b.className='btn '+(owned?'plum':'dark');b.disabled=shopBusy||(!owned&&credits()<item.cost)||(!myFighter&&!!item.look)||(owned&&!item.look);
-    b.innerHTML='<b>'+item.name+'</b><br><small>'+item.desc+'</small><br><small>'+(owned?(item.look?'ADQUIRIDO · EQUIPAR':'ACTIVO'):item.cost+' CREDITOS')+'</small>';b.onclick=()=>buyItem(item);list.appendChild(b)});
-  if(!myFighter)$('#shopMsg').textContent='Crea tu personaje desde el menú para equipar ropa y peinados.'}
-async function buyItem(item){if(shopBusy)return;const w=wallet(),owned=w.owned.includes(item.id);if(!owned&&credits()<item.cost)return;shopBusy=true;const previous=JSON.parse(JSON.stringify(w));renderShop();
+function openShop(v){shopVenue=v;shopFeedbackId=null;show('s-shop');Snd.theme('title');drawFace($('#shopFace').getContext('2d'),BRONCAS,'#385c58');$('#shopQuote').textContent=BRONCAS_QUOTES[Math.floor(Math.random()*BRONCAS_QUOTES.length)];$('#shopMsg').textContent='';renderShop()}
+function shopItemState(item){
+  const owned=wallet().owned.includes(item.id),equipped=!!(owned&&item.look&&myFighter&&Object.entries(item.look).every(([key,value])=>myFighter[key]===value));
+  const missing=Math.max(0,item.cost-credits()),needsFighter=!!item.look&&!myFighter;
+  const label=equipped?'EQUIPADO':owned?(item.look?'EQUIPAR · GRATIS':'MEJORA ACTIVA'):(item.look?'COMPRAR Y EQUIPAR':'COMPRAR Y ACTIVAR')+' · '+item.cost+' CREDITOS';
+  const hint=needsFighter?'Crea tu personaje en el menú antes de comprar o equipar este artículo.':equipped?'Ya lo lleva tu personaje.':owned?(item.look?'Es tuyo. Puedes equiparlo otra vez sin pagar.':'Permanente y activa. No se vuelve a comprar.') :missing?'Te faltan '+missing+' créditos.':item.look?'Se equipará en tu personaje al comprar.':'Se activará automáticamente al comprar.';
+  return{owned,equipped,label,hint,disabled:shopBusy||needsFighter||(!owned&&missing>0)||equipped||(owned&&!item.look)};
+}
+function renderShop(){
+  $('#shopBalance').textContent='TU SALDO: '+credits()+' CREDITOS';const list=$('#shopItems');list.innerHTML='';
+  SHOP.forEach(item=>{const state=shopItemState(item),card=document.createElement('article');card.className='shop-card';card.setAttribute('aria-label',item.name);
+    card.innerHTML='<h3>'+esc(item.name)+'</h3><p>'+esc(item.desc)+'</p><p class="shop-state" id="shopState-'+item.id+'">'+esc(state.hint)+'</p>';
+    const b=document.createElement('button');b.className='btn '+(state.owned?'plum':'gold');b.disabled=state.disabled;b.textContent=shopBusy&&shopFeedbackId===item.id?'GUARDANDO…':state.label;b.setAttribute('aria-describedby','shopState-'+item.id);b.onclick=()=>buyItem(item);card.appendChild(b);
+    const feedback=document.createElement('p');feedback.className='shop-feedback';feedback.setAttribute('role','status');feedback.textContent=shopFeedbackId===item.id?$('#shopMsg').textContent:'';card.appendChild(feedback);list.appendChild(card)});
+  $('#shopBack').disabled=shopBusy;
+}
+async function buyItem(item){if(shopBusy||(!myFighter&&item.look))return;shopFeedbackId=item.id;$('#shopMsg').textContent='';const w=wallet(),owned=w.owned.includes(item.id);if(!owned&&credits()<item.cost)return;shopBusy=true;const previous=JSON.parse(JSON.stringify(w));renderShop();
   try{if(!owned){w.spent+=item.cost;w.owned.push(item.id);await saveProgress();if(saveError){progress().shop=previous;throw Error(saveError)}}
     if(item.look){const next={...myFighter,...item.look};if(account.mode==='live'){const{error}=await sb.from('fighters').update({rashguard_color:next.rash,short_color:next.short,look:{skin:next.skin,hair:next.hair,hairStyle:next.hairStyle,gi:!!next.gi,band:next.band||''}}).eq('id',next.id).eq('profile_id',account.uid);if(error)throw Error('Compra guardada; no se pudo equipar. Toca EQUIPAR para reintentar.')}
       myFighter=next;store.set('bjjm_fighter',next)}
-    Snd.ok();$('#shopMsg').textContent=item.look?'Equipado. ¡Puro lifestyle!':'Mejora activa para tu próximo combate.';
+    Snd.ok();$('#shopMsg').textContent=(owned?'Sin cargo. ':item.cost+' créditos descontados. ')+(item.look?item.name+' equipado en tu personaje.':item.name+' activo para tus próximos combates.')+' Saldo: '+credits()+' créditos.';
   }catch(e){$('#shopMsg').textContent=e.message}finally{shopBusy=false;renderShop()}}
 $('#shopBack').onclick=()=>leaveVenue(shopVenue);
 
