@@ -676,6 +676,7 @@ function useItem(S,id){if(S.over||!ITEMS[id]||!(S.bag[id]>0))return[];const ev=[
   ev.push({t:'fx',n:'breathe',who:'p'});if(heal)ev.push({t:'dmg',who:'p',amt:-heal});
   ev.push({t:'say',text:`${a.sn} usa ${ITEMS[id].n}. ${ITEMS[id].d}.`},{t:'sync',snap:snap(S)});return ev}
 
+function resultTurns(S){return Math.min(MAX_TURNS,S.turn+(S.over?.by==='points'?0:1))}
 function upkeep(S){const ev=[];S.turn++;
   for(const w of['p','e']){const f=S[w];f.sta=Math.min(f.maxSta,f.sta+5);
     if(roleOf(S,w)==='bottom'&&['SIDE','MOUNT','BACK','TURTLE'].includes(S.pos))f.sta=Math.max(0,f.sta-4);
@@ -1084,7 +1085,7 @@ async function startBattle(def,foe,foeKey,bgOverride){battleHistory=[];$('#logPa
 async function endBattle(){busy=true;menu('wait');Snd.stop();Snd.cur=null;const o=S.over,won=o.winner==='p';view=snap(S);hud();
   if(o.by==='tapout')await say(`${S.p.sn} tapea a tiempo. Vivir para pelear otro día.`);
   Snd.jingle(won);haptic(won?[80,40,80,40,200]:[300]);await say(won?(FOE.boss?`¡Venciste a ${FOE.name}! El circuito entero lo va a saber.`:`¡Victoria sobre ${FOE.sn}! Oss.`):`${FOE.sn} se lleva el combate.`,undefined,900);
-  store.set('bjjm_trial',true);$('#auto').classList.remove('show');const beltBefore=account.profile.belt;pending={beltBefore,winner:o.winner,by:o.by,tech:o.tech,pos:S.pos,turns:S.turn,pp:S.p.pts,ep:S.e.pts,foe:FOEKEY,lp:LP_DELTA(o,FOE)};await recordMatch(pending);openGate(pending);busy=false}
+  store.set('bjjm_trial',true);$('#auto').classList.remove('show');const beltBefore=account.profile.belt;pending={beltBefore,winner:o.winner,by:o.by,tech:o.tech,pos:S.pos,turns:resultTurns(S),pp:S.p.pts,ep:S.e.pts,foe:FOEKEY,lp:LP_DELTA(o,FOE)};await recordMatch(pending);openGate(pending);busy=false}
 
 /* ---- Resultado + soft gate + Auth ---- */
 function gateButtons(mode){const row=$('#gRow'),main=$('#btnSignup');row.innerHTML='';

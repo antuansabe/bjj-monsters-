@@ -3,7 +3,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const between=(a,b)=>html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)));
 new Function(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
-const E=new Function(between('/*ENGINE-START','/*ENGINE-END*/')+';return{ROSTER,U,SIG,newMatch,resolve,useItem,avail,setPos,upkeep};')();
+const E=new Function(between('/*ENGINE-START','/*ENGINE-END*/')+';return{ROSTER,U,SIG,newMatch,resolve,useItem,avail,setPos,upkeep,resultTurns};')();
+assert.equal(E.resultTurns({turn:0,over:{by:'submission'}}),1);
+assert.equal(E.resultTurns({turn:2,over:{by:'submission'}}),3);
+assert.equal(E.resultTurns({turn:24,over:{by:'points'}}),24);
 for(const id of ['vagabundo','johnny','black_johnny','chanops'])assert.ok(E.ROSTER[id]);
 assert.ok(E.ROSTER.black_johnny.hp>E.ROSTER.johnny.hp);assert.ok(E.ROSTER.chanops.hp<E.ROSTER.spaz.hp);
 let restricted=E.newMatch(E.ROSTER.black_johnny,E.ROSTER.johnny);E.setPos(restricted,'p','BACK:top');assert.ok(!E.avail(restricted,'p').some(m=>m.forbidden));restricted.underground=true;assert.ok(E.avail(restricted,'p').some(m=>m.forbidden));
