@@ -83,15 +83,30 @@ h2{font-size:12px;font-weight:400;margin:4px 42px 0;text-align:center;color:var(
 #vsDlg{margin:10px}
 
 /* combate */
-#s-battle{padding:6px;gap:5px}
+#s-battle{padding:6px;gap:6px;overflow-y:auto}
+#s-battle>*{flex-shrink:0}
+.battleHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:46px;min-height:38px}
+.battleHeader .clock{display:flex;align-items:center;gap:8px;border:0;padding:4px 6px}
+.battleHeader #auto{position:static;width:54px;height:34px;flex:none;font-size:12px}
+#s-battle .menu{height:clamp(144px,22svh,180px);flex:none}
+#s-battle .dialog{font-size:19px;min-height:66px}
+#s-battle .poschip{position:static;align-self:flex-start;max-width:100%;margin:0;font-size:15px}
+#s-battle .stage{flex:1 0 210px;min-height:210px}
+#s-battle .stage>canvas{position:absolute;inset:0}
+
 .stage{position:relative;flex:1 1 0;min-height:158px;background:#0d0f1a;border:3px solid var(--line);border-radius:6px;overflow:hidden}
 .stage canvas{width:100%;height:100%}
-.hudrow{position:absolute;top:4px;left:4px;right:46px;display:grid;grid-template-columns:1fr auto 1fr;gap:4px;align-items:start;z-index:2}
+.hudrow{position:static;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:start;flex:none}
 .stat{padding:5px 7px 5px;line-height:1.25;border-width:2px;border-radius:5px;box-shadow:inset 0 0 0 1px var(--paper),inset 0 0 0 2px #bcc4d8,0 2px 0 rgba(0,0,0,.35)}
+.stat{min-width:0}
+.stat .nm>span:first-child{overflow:hidden;text-overflow:ellipsis}
+.stat .nm>span:last-child{flex-shrink:0}
 .stat .nm{display:flex;justify-content:space-between;font-size:17px;font-weight:400;gap:6px;white-space:nowrap;overflow:hidden;margin-bottom:2px}
 .meter{display:grid;grid-template-columns:26px 1fr;align-items:center;gap:4px;margin-top:2px;font-size:13px;font-weight:400}
 .meter .bar{height:8px}.meter .bar i{transition:width .4s steps(10)}
-.chips{min-height:12px;margin-top:3px;display:flex;gap:3px;flex-wrap:wrap}
+.meter.special-meter{grid-template-columns:26px minmax(0,1fr) 30px}.meter.special-meter small{text-align:right;font-size:12px}
+.chips:empty{display:none}
+.chips{min-height:0;margin-top:3px;display:flex;gap:3px;flex-wrap:wrap}
 .chip{background:var(--ink);color:var(--gold);padding:0 4px;font-size:13px;border-radius:2px;font-weight:400}.chip.bad{color:#fff;background:var(--red)}
 .clock{background:var(--ink);color:var(--gold);padding:4px 6px;border:2px solid var(--line);border-radius:4px;text-align:center;min-width:56px;font-size:20px;font-weight:400;line-height:1.1}
 .clock small{display:block;font-size:12px;color:var(--mute)}
@@ -266,12 +281,14 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
 </section>
 
 <section class="scr" id="s-battle">
+  <div class="battleHeader"><div class="clock"><span id="clock">10:00</span><small id="turnLbl">TURNO 1/24</small></div><button class="btn dark" id="auto" aria-label="Avance automatico de dialogos">AUTO</button></div>
+  <div class="hudrow"><div class="box stat" id="stP"></div><div class="box stat" id="stE"></div></div>
   <div class="stage" id="stage">
     <canvas id="cv" width="160" height="120" aria-hidden="true"></canvas>
-    <div class="hudrow"><div class="box stat" id="stP"></div><div class="clock"><span id="clock">10:00</span><small id="turnLbl">TURNO 1/24</small></div><div class="box stat" id="stE"></div></div>
+
     <div id="specialFx" aria-hidden="true"><canvas width="24" height="24"></canvas><strong></strong></div><div id="banner"></div><div id="floats"></div>
-    <div class="poschip" id="posChip">DE PIE</div>
   </div>
+  <div class="poschip" id="posChip">DE PIE</div>
   <div class="posbar" id="posbar"></div>
   <div class="box dialog" id="dlg" role="status" aria-live="polite"><span id="dlgText"></span><button class="next" tabindex="-1">CONTINUAR</button></div>
   <div class="row battleTools"><button class="btn dark sm" id="battleSpeed">RITMO 1X</button><button class="btn dark sm" id="battleLog">HISTORIAL</button><button class="btn dark sm" id="battleTap">TAPEAR</button></div><div id="logPanel" class="box sm" hidden></div>
@@ -394,7 +411,7 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
 
 <div id="wipe"></div>
 <button class="btn dark" id="mute" aria-label="Sonido">♪</button>
-<button class="btn dark" id="auto" aria-label="Avance automatico de dialogos" style="top:52px">AUTO</button>
+
 </div></div>
 <script>
 /* ============================================================
@@ -1066,7 +1083,7 @@ document.addEventListener('click',e=>{if(e.target.closest('.next')){e.stopPropag
 function hud(){const v=view;if(!v)return;const col=p=>p>.5?'var(--green)':p>.22?'var(--gold)':'var(--red)';
   const box=f=>{const hp=f.hp/f.maxHp,st=f.sta/f.maxSta;const chips=[f.tilt>0&&['TILT',1],f.lock>0&&['ATRAPADO',1],f.def>0&&['DEFENSA',0],f.grip>0&&['AGARRE+',0]].filter(Boolean).map(([t,b])=>`<span class="chip${b?' bad':''}">${t}</span>`).join('');
     return`<div class="nm"><span>${esc(f.sn)}</span><span>${f.pts}P ${f.adv||0}V</span></div><div class="meter"><span>HP</span><div class="bar"><i style="width:${hp*100}%;background:${col(hp)}"></i></div></div>
-     <div class="meter"><span>STA</span><div class="bar"><i style="width:${st*100}%;background:var(--sta)"></i></div></div><div class="meter"><span>ESP</span><div class="bar"><i style="width:${f.charge||0}%;background:var(--gold)"></i></div><small>${f.charge||0}%</small></div><div class="chips">${chips}</div>`};
+     <div class="meter"><span>STA</span><div class="bar"><i style="width:${st*100}%;background:var(--sta)"></i></div></div><div class="meter special-meter"><span>ESP</span><div class="bar"><i style="width:${f.charge||0}%;background:var(--gold)"></i></div><small>${f.charge||0}%</small></div><div class="chips">${chips}</div>`};
   $('#stP').innerHTML=box(v.p);$('#stE').innerHTML=box(v.e);$('#clock').textContent=clockStr(v);$('#turnLbl').textContent='TURNO '+Math.min(MAX_TURNS,v.turn+1)+'/'+MAX_TURNS;$('#clock').parentElement.classList.toggle('low',v.turn>=MAX_TURNS-5);
   const who=v.top===null?'':v.top==='p'?'me':'foe';$('#posbar').innerHTML=POS_ORDER.map(k=>`<span class="${k===v.pos?'cur '+who:''}">${POS[k].s}</span>`).join('');
   const chip=$('#posChip');chip.textContent=POS[v.pos].n+(v.top===null?'':v.pos==='GUARD'?(v.top==='p'?' · BUSCA EL PASE':' · JUEGAS GUARDIA'):v.pos==='HALF'?(v.top==='p'?' · MEDIA POR ARRIBA':' · MEDIA POR ABAJO'):v.top==='p'?' · DOMINAS':' · TE DOMINAN');chip.style.color=v.top==='p'?'var(--green)':v.top==='e'?'#ff8a80':'var(--gold)'}
