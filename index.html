@@ -1319,7 +1319,7 @@ function drawMap(c,fr){const VW=160,VH=c.canvas.height;c.imageSmoothingEnabled=f
     if(!open_){c.fillStyle='#e0483c';c.fillRect(v.dx*TS+5,v.dy*TS+6,6,5);c.fillStyle=INK;c.fillRect(v.dx*TS+7,v.dy*TS+8,2,2)}
     if(v.id==='cji'&&(fr>>3)&1){c.fillStyle='#4fe0ff';for(let i=0;i<v.w;i++)c.fillRect(X+i*TS+6,Y+Hh*.45+1,4,2)}}
   const actors=NPCS.map(n=>({y:n.y*TS,f:()=>drawWalker(c,n.x*TS,n.y*TS-2,'down',ROSTER[n.pal].pal,0)}));
-  actors.push({y:rocha.y*TS,f:()=>{drawWalker(c,rocha.x*TS,rocha.y*TS-2,'down',ROSTER.bad_rocha.pal,fr>>3);const labelX=rocha.x*TS-12,labelY=rocha.y*TS-15;c.fillStyle='#e8edf4';c.fillRect(labelX-1,labelY-1,42,12);c.fillStyle='#171b2b';c.fillRect(labelX,labelY,40,10);ptext(c,'BAD ROCHA',labelX+2,labelY+2,'#ffffff')}});
+  actors.push({y:rocha.y*TS,f:()=>{drawWalker(c,rocha.x*TS,rocha.y*TS-2,'down',ROSTER.bad_rocha.pal,fr>>3);if(rocha.x*TS+16<cx||rocha.x*TS>cx+VW)return;const labelX=clamp(rocha.x*TS-12,cx+2,cx+VW-42),labelY=rocha.y*TS-15;c.fillStyle='#e8edf4';c.fillRect(labelX-1,labelY-1,42,12);c.fillStyle='#171b2b';c.fillRect(labelX,labelY,40,10);ptext(c,'BAD ROCHA',labelX+2,labelY+2,'#ffffff')}});
   actors.push({y:me.py,f:()=>drawWalker(c,Math.round(me.px),Math.round(me.py)-2,me.dir,mapPal(),me.moving?me.step:0)});
   actors.sort((a,b)=>a.y-b.y).forEach(a=>a.f());c.restore()}
 function mapTick(){tickRocha();if(!$('#s-map').classList.contains('on'))return;if(me.moving){const[dx,dy]=DIRS[me.dir];me.px+=dx*1.34;me.py+=dy*1.34;me.step++;
