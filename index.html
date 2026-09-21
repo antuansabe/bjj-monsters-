@@ -1045,9 +1045,9 @@ function renderSelect(){show('s-select');const first=!store.get('bjjm_trial',fal
   $('#grid').style.gridTemplateColumns='repeat(4,1fr)';
   const T=sel.circuit?CIRCUIT[circuit.si]:null;
   $('#selTitle').textContent=T?T.name:(me?'ELIGE TU LUCHADOR':'ELIGE A TU RIVAL');
-  $('#selSub').textContent=T?('CON QUIEN VAS A PELEAR EL TORNEO · '+T.fights.length+' COMBATES'):(me?(first?'PRIMER COMBATE GUIADO · CONTRA EL ESPAZADO':TIPS[(Math.random()*TIPS.length)|0]):'ELIGE UN RIVAL · GANAR DA 60 XP Y CREDITOS. CADA ESTILO EXIGE OTRA ESTRATEGIA.');
-  $('#selBack').textContent=sel.circuit?'VOLVER':(me?'INICIO':'VOLVER');$('#selGo').disabled=true;
-  $('#selGo').textContent=T?'EMPEZAR TORNEO':(me&&!first?'ELEGIR RIVAL':'¡OSS! A PELEAR');
+  $('#selSub').textContent=sel.encounter?'RETO DE BAD ROCHA · ELIGE CON QUIÉN PELEAR':T?('CON QUIEN VAS A PELEAR EL TORNEO · '+T.fights.length+' COMBATES'):(me?(first?'PRIMER COMBATE GUIADO · CONTRA EL ESPAZADO':TIPS[(Math.random()*TIPS.length)|0]):'ELIGE UN RIVAL · GANAR DA 60 XP Y CREDITOS. CADA ESTILO EXIGE OTRA ESTRATEGIA.');
+  $('#selBack').textContent=sel.circuit||sel.fromMap?'VOLVER':(me?'INICIO':'VOLVER');$('#selGo').disabled=true;
+  $('#selGo').textContent=sel.encounter?'PELEAR CONTRA BAD ROCHA':T?'EMPEZAR TORNEO':(me&&!first?'ELEGIR RIVAL':'¡OSS! A PELEAR');
   $('#detail').innerHTML='<p class="sm center" style="color:var(--line);margin:auto">Toca un retrato para ver su juego. Las medallas desbloquean nuevos luchadores.</p>';const g=$('#grid');g.innerHTML='';
   keys.forEach(k=>{const d=defOf(k),b=document.createElement('button');b.className='face'+(d.boss?' boss':'');b.setAttribute('aria-pressed','false');b.setAttribute('aria-label',d.name);
     b.innerHTML=`<canvas width="24" height="24"></canvas><small>${esc(d.sn)}</small>`;g.appendChild(b);drawFace(b.querySelector('canvas').getContext('2d'),d.pal,d.boss?'#9a2a20':d.joke?'#4a5a3a':'#2f6fb8');
