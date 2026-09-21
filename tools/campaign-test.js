@@ -3,7 +3,7 @@ const h=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const slice=(a,b)=>h.slice(h.indexOf(a),h.indexOf(b,h.indexOf(a)));
 (async()=>{
  const make=new Function('defs','gate',`
- let account={mode:'guest',profile:{lp:0,progress:{medals:['copa']}}},PLAYABLE=[],nodes={};
+ let account={mode:'guest',profile:{lp:0,progress:{medals:['copa','flow','umbral']}}},PLAYABLE=[],nodes={};
  const $=key=>nodes[key]||(nodes[key]={textContent:'',innerHTML:'',className:'',classList:{contains:()=>true},getContext:()=>({})});
  const show=()=>{},drawFace=()=>{},UP=x=>x,esc=x=>x,nextBelt=()=>null,say=async()=>{};
  let FOE={pal:{},sn:'TEST',q:{win:'',lose:''}},S={p:{hp:50},bag:{}},mode;

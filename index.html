@@ -244,6 +244,7 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
 #specialFx{display:none;position:absolute;inset:18% 0 auto;min-height:92px;z-index:6;align-items:center;justify-content:center;gap:12px;padding:14px 10px;background:repeating-linear-gradient(-15deg,#141626 0 8px,#252a45 8px 10px);border-block:4px solid var(--special-color);box-shadow:0 0 30px var(--special-color);pointer-events:none}
 #specialFx.on{display:flex;animation:specialCut .65s steps(10) both}#specialFx canvas{width:60px;height:60px}#specialFx strong{max-width:65%;font:11px/1.8 'Press Start 2P',monospace;color:var(--special-color);text-shadow:2px 2px #000}
 @keyframes specialCut{0%{transform:translateX(-100%)}20%,80%{transform:translateX(0)}100%{transform:translateX(100%)}}
+#circuitList{grid-auto-rows:max-content;align-content:start;overflow-y:auto}#circuitList>button{white-space:normal;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -1065,7 +1066,7 @@ async function say(text,el=$('#dlgText'),hold){const box=el.closest('.box'),scre
   await wait(autoText?Math.max(280,Math.min(2400,Math.max(700,hold||0,text.length*26))/speed):20000);
   if(box)box.classList.remove('ready')}
 let vsStarting=false;
-async function openVS(){if(vsStarting)return;vsStarting=true;const me=sel.me,foe=defOf(sel.foeKey),T=circuit?CIRCUIT[circuit.si]:null,ar=ARENAS[(T?T.bg:foe.bg)||'dojo'];
+async function openVS(){if(circuit&&!canEnter(circuit.si)){circuit=null;openCircuit();return}if(vsStarting)return;vsStarting=true;const me=sel.me,foe=defOf(sel.foeKey),T=circuit?CIRCUIT[circuit.si]:null,ar=ARENAS[(T?T.bg:foe.bg)||'dojo'];
   show('s-vs');Snd.stop();Snd.cur=null;Snd.thump();haptic([30,40,90]);
   drawFace($('#vsP').getContext('2d'),me.pal,'#2f6fb8');drawFace($('#vsE').getContext('2d'),foe.pal,'#9a2a20');
   $('#vsPn').innerHTML=`${esc(me.sn)}<br><span class="xs">${esc(me.tag)}</span>`;$('#vsEn').innerHTML=`${esc(foe.sn)}<br><span class="xs">${esc(foe.tag)}</span>`;
@@ -1122,7 +1123,7 @@ async function turn(a){if(busy||S.over)return;busy=true;menu('wait');
   if(!S.over)await playEvents(resolve(S,'e',aiPick(S,'e')));
   if(!S.over)await playEvents(upkeep(S));
   if(S.over)return endBattle();Snd.theme(musicFor());busy=false;menu('root');prompt_()}
-async function startBattle(def,foe,foeKey,bgOverride){battleHistory=[];$('#logPanel').hidden=true;Snd.wake();S=newMatch(def,foe,{underground:!!(circuit&&CIRCUIT[circuit.si].id==='carnales'&&foeKey==='black_johnny')});FOE=foe;FOEKEY=foeKey;PP=def.pal;EP=foe.pal;BG=bgOverride||foe.bg||'dojo';
+async function startBattle(def,foe,foeKey,bgOverride){if(circuit&&!canEnter(circuit.si)){circuit=null;openCircuit();return}battleHistory=[];$('#logPanel').hidden=true;Snd.wake();S=newMatch(def,foe,{underground:!!(circuit&&CIRCUIT[circuit.si].id==='carnales'&&foeKey==='black_johnny')});FOE=foe;FOEKEY=foeKey;PP=def.pal;EP=foe.pal;BG=bgOverride||foe.bg||'dojo';
   const pk=perks();S.p.maxHp+=pk.hp;S.p.hp=S.p.maxHp;S.p.cbonus=pk.cb;for(const k in pk.bag)S.bag[k]+=pk.bag[k];
   if(circuit&&circuit.carry){S.p.hp=Math.max(30,Math.min(S.p.maxHp,circuit.carry.hp+35));S.bag=circuit.carry.bag}
   view=snap(S);busy=true;show('s-battle');fitCanvas(cv);hud();menu('wait');$('#dlgText').textContent='';$('#auto').classList.add('show');
@@ -1152,12 +1153,13 @@ function gateButtons(mode){const row=$('#gRow'),main=$('#btnSignup');row.innerHT
   main.onclick=()=>guest&&!myFighter?openAuth(true):continueAdventure();
   if(guest)myFighter?add('CREAR CUENTA Y GUARDAR','gold',()=>openAuth(true)):add('CREAR PERSONAJE LOCAL','dark',openBuilder);
   add('REVANCHA','red',()=>{tapNow();openVS()});sel.fromMap?add('VOLVER AL MAPA','dark',()=>leaveVenue(sel.fromMap)):add('OTRO COMBATE','dark',openSelect)}
-function nextRound(){if(vsStarting)return;circuit.idx++;sel.foeKey=CIRCUIT[circuit.si].fights[circuit.idx];openVS()}
+function nextRound(){if(vsStarting||!circuit||!canEnter(circuit.si)||circuit.idx+1>=CIRCUIT[circuit.si].fights.length)return;circuit.idx++;sel.foeKey=CIRCUIT[circuit.si].fights[circuit.idx];openVS()}
 async function openGate(o){show('s-gate');const won=o.winner==='p',b=$('#gBanner');b.textContent=won?'¡VICTORIA!':'DERROTA';b.className='banner '+(won?'win':'lose');
   $('#gHow').textContent=UP((o.by==='points'?'POR PUNTOS':o.by==='tapout'?'RENDICION':'POR SUMISION')+' · '+(o.tech||'')+` · ${o.turns} TURNOS`);
 drawFace($('#gFace').getContext('2d'),FOE.pal,won?'#4a5a6a':'#9a2a20');
   $('#gQuote').innerHTML=`<span style="color:#9a2a20">${esc(FOE.sn)}</span><br>${esc(won?FOE.q.lose:FOE.q.win)}`;
   let mode='normal',stageAward=0;
+  if(circuit&&!canEnter(circuit.si))circuit=null;
   if(circuit){const T=CIRCUIT[circuit.si];
     if(o.winner!=='p')mode='retry';
     else if(T.id==='carnales'&&circuit.idx===2){mode='johnny';const pr=progress();pr.johnnyDefeated=true;await saveProgress();circuit.carry=null}
@@ -1202,14 +1204,14 @@ $('#aGo').onclick=async()=>{const user=$('#aUser').value.trim(),mail=$('#aMail')
 /* ---- Modo aventura: circuito mundial ---- */
 const CIRCUIT=[
  {id:'copa',name:'COPA HORIZONTE',bg:'dojo',requires:[],bonus:30,fights:['chanops','niko'],desc:'Primer paso. Dos combates y tu primera medalla.'},
- {id:'flow',name:'COPA FLOW',bg:'flow',requires:[],bonus:40,fights:['chelo','mika','luana'],desc:'Barridos, movilidad y guardia. Tres estilos diferentes.'},
- {id:'umbral',name:'DESAFIO UMBRAL',bg:'umbral',requires:['copa'],bonus:50,fights:['kolya','bazza','tito'],desc:'Control, paciencia y escapes. Tres rondas de presión.'},
- {id:'carnales',name:'DOS CARNALES DOJO',bg:'carnales',requires:['copa'],bonus:120,fights:['chanops','vagabundo','johnny','black_johnny'],desc:'Vence a Johnny C. Cobra 40 créditos o reta a Black Johnny por la medalla y 120 créditos.'},
+ {id:'flow',name:'COPA FLOW',bg:'flow',requires:['copa'],bonus:40,fights:['chelo','mika','luana'],desc:'Barridos, movilidad y guardia. Tres estilos diferentes.'},
+ {id:'umbral',name:'DESAFIO UMBRAL',bg:'umbral',requires:['copa','flow'],bonus:50,fights:['kolya','bazza','tito'],desc:'Control, paciencia y escapes. Tres rondas de presión.'},
+ {id:'carnales',name:'DOS CARNALES DOJO',bg:'carnales',requires:['copa','flow','umbral'],bonus:120,fights:['chanops','vagabundo','johnny','black_johnny'],desc:'Vence a Johnny C. Cobra 40 créditos o reta a Black Johnny por la medalla y 120 créditos.'},
  {id:'ibjjf',name:'IBJJF WORLDS',bg:'ibjjf',requires:['copa','flow','umbral','carnales'],bonus:70,fights:['keiji','luana','tonelada'],desc:'Reúne las cuatro medallas de dojo. Tres rondas de campeonato.'},
  {id:'adcc',name:'ADCC TRIALS',bg:'adcc',requires:['ibjjf'],bonus:90,fights:['kolya','mika','chelo'],desc:'Después del Worlds: tres combates sin kimono.'},
  {id:'cji',name:'CJI INVITATIONAL',bg:'cji',requires:['copa','flow','umbral','carnales','ibjjf','adcc'],bonus:160,fights:['tito','bazza','ryker'],desc:'Cumbre del circuito. Exige las otras seis medallas. Reglas RPG: puntos y sumisión.'}];
 let circuit=null;
-const missingMedals=i=>{const t=CIRCUIT[i];return t?(t.id==='cji'?CIRCUIT.filter(x=>x.id!=='cji').map(x=>x.id):t.requires).filter(id=>!progress().medals.includes(id)):['invalid']};
+const missingMedals=i=>{const t=CIRCUIT[i];return t?CIRCUIT.slice(0,i).map(x=>x.id).filter(id=>!progress().medals.includes(id)):['invalid']};
 const canEnter=i=>!!CIRCUIT[i]&&missingMedals(i).length===0;
 const unlockedFighters=()=>{const pr=progress(),n=pr.medals.length;return [...PLAYABLE.filter((k,i)=>k==='don_moi'||i<3+n*2),'chanops',...(pr.johnnyDefeated?['vagabundo','johnny']:[]),...(pr.medals.includes('carnales')?['black_johnny']:[])]};
 const progress=()=>{const p=account.profile;if(!p.progress||typeof p.progress!=='object')p.progress={stage:0,medals:[]};if(!Array.isArray(p.progress.medals))p.progress.medals=[];p.progress.medals=[...new Set(p.progress.medals.filter(id=>CIRCUIT.some(t=>t.id===id)))];p.progress.stage=CIRCUIT.findIndex(t=>!p.progress.medals.includes(t.id));if(p.progress.stage<0)p.progress.stage=CIRCUIT.length;return p.progress};
@@ -1222,8 +1224,8 @@ function openCircuit(){show('s-circuit');$('#s-circuit h2').textContent='CIRCUIT
     const b=document.createElement('button');b.className='btn stagecard '+(done?'gold':open_?'dark':'dark lock');b.disabled=!open_;
     b.innerHTML=`<canvas width="24" height="24"></canvas><span><b>${esc(t.name)}</b><small>${esc(t.desc)}</small><small class="mute">${t.fights.length} combates · Medalla + luchadores</small></span><span class="medal">${done?'MEDALLA':open_?'ABIERTO':'CERRADO'}</span>`;
     box.appendChild(b);drawFace(b.querySelector('canvas').getContext('2d'),ROSTER[t.fights[t.fights.length-1]].pal,done?'#4a5a3a':'#9a2a20');
-    b.onclick=()=>{circuit={si:i,idx:0};sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,circuit:1};renderSelect()}})}
-function openAtlas(){show('s-circuit');$('#s-circuit h2').textContent='MAPA Y DESTINOS';$('#s-circuit p').textContent='Elige una sede para viajar. Las medallas abren nuevos torneos.';const box=$('#circuitList');box.innerHTML='';const overview=document.createElement('canvas');overview.width=160;overview.height=196;overview.setAttribute('aria-label','Plano del circuito: CJI al norte, ADCC debajo, Worlds al centro y dojos al sur');overview.style.cssText='width:100%;max-height:320px;object-fit:contain;background:#182b31;border:2px solid #65865b';box.appendChild(overview);drawOverview(overview.getContext('2d'));
+    b.onclick=()=>{if(!canEnter(i))return;circuit={si:i,idx:0};sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,circuit:1};renderSelect()}})}
+function openAtlas(){show('s-circuit');$('#s-circuit h2').textContent='MAPA Y DESTINOS';$('#s-circuit p').textContent='Ruta: Horizonte → Flow → Umbral → Dos Carnales → Worlds → ADCC → CJI. Gana cada medalla para avanzar.';const box=$('#circuitList');box.innerHTML='';const overview=document.createElement('canvas');overview.width=160;overview.height=196;overview.setAttribute('aria-label','Plano del circuito: CJI al norte, ADCC debajo, Worlds al centro y dojos al sur');overview.style.cssText='width:100%;max-height:320px;object-fit:contain;background:#182b31;border:2px solid #65865b';box.appendChild(overview);drawOverview(overview.getContext('2d'));
   VENUES.forEach(v=>{const open_=v.stage===null||canEnter(v.stage),b=document.createElement('button');b.className='btn '+(v.id==='shop'?'gold':'dark');b.disabled=!open_;
     const missing=v.stage===null?[]:missingMedals(v.stage).map(id=>CIRCUIT.find(t=>t.id===id));
     b.innerHTML='<b>'+esc(v.name)+'</b><br><small>'+(open_?(v.id==='shop'?'SURESTE · KIMONOS, LOOKS Y MEJORAS':v.rivals?'RIVALES PROPIOS · ENTRENAR': 'TORNEO DESBLOQUEADO'):'FALTA: '+missing.map(t=>t.name).join(', '))+'</small>';

@@ -71,3 +71,11 @@ shopFighter.rash='#c27656';assert.equal(shopState(moss).label,'EQUIPAR · GRATIS
 assert.match(shopState({id:'hair',cost:100,look:{hair:'#fff'}}).hint,/Te faltan 100/);
 shopWallet.owned.push('plant');assert.equal(shopState({id:'plant',cost:60}).label,'MEJORA ACTIVA');
 console.log('OK: estados de tienda, coste visible, equipado, reequipamiento gratis y créditos faltantes.');
+
+// Cada medalla abre exactamente la siguiente sede; ningún salto de stage basta.
+for(let i=0;i<prog.CIRCUIT.length;i++){
+ profile.progress.medals=prog.CIRCUIT.slice(0,i).map(t=>t.id);
+ for(let j=0;j<prog.CIRCUIT.length;j++)assert.equal(prog.canEnter(j),j<=i,`Ruta ${i}: sede ${j}`);
+}
+profile.progress.medals=['adcc'];assert.equal(prog.canEnter(6),false);
+console.log('OK: todas las transiciones entre dojos y bloqueo de saltos.');
