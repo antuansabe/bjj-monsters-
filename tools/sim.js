@@ -4,6 +4,7 @@ require('./regression.js');
 require('./campaign-test.js');
 require('./special-test.js');
 require('./training-test.js');
+require('./rocha-test.js');
 require('./don-moi-test.js');
 require('./campaign-balance.js');
 const fs=require('fs'),path=require('path');
