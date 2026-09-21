@@ -3,7 +3,7 @@ const h=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const slice=(a,b)=>h.slice(h.indexOf(a),h.indexOf(b,h.indexOf(a)));
 const E=new Function(slice('/*ENGINE-START','/*ENGINE-END*/')+';return{ROSTER,PLAYABLE,newMatch,useItem,avail,setPos,chance,U};')();
 const moi=E.ROSTER.don_moi;
-assert.equal(moi.pal.belt,'#8a4fc2');assert.equal(moi.pal.skin,'#8a5a3a');assert.ok(E.PLAYABLE.includes('don_moi'));
+assert.equal(moi.pal.belt,'#8a4fc2');assert.equal(moi.pal.skin,'#b07a4e');assert.equal(moi.pal.beard,undefined);assert.ok(E.PLAYABLE.includes('don_moi'));
 const unlock=new Function('account','PLAYABLE',slice('const CIRCUIT=','async function saveProgress')+';return unlockedFighters;')({profile:{progress:{medals:[]}}},E.PLAYABLE);
 assert.ok(unlock().includes('don_moi'),'Seleccionable sin medallas');assert.equal(new Set(unlock()).size,unlock().length);
 let s=E.newMatch(moi,E.ROSTER.chelo);assert.equal(s.bag.porrosetamol,1);
