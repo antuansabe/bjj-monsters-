@@ -371,6 +371,7 @@ th{color:var(--gold);font-size:12px;font-family:'Press Start 2P',monospace}
     <button class="btn tile" id="tRank"><b>RANKING</b><small>Tabla mundial</small></button>
     <button class="btn dark tile lock" disabled><b>ARENA PVP</b><small>Proximamente</small></button>
   </div>
+  <div class="box sm" id="trainingProgress"></div>
   <div class="grow"></div>
   <button class="btn gold sm" id="hubSignup">CREAR CUENTA Y GUARDAR</button>
   <button class="btn dark sm" id="btnLogout">CERRAR SESION</button>
@@ -669,7 +670,7 @@ function specialFor(def){const set=def.sets[0],all=U.concat(...Object.values(SIG
     ...(base.rec?{rec:35}:{dmg:(base.dmg||5)+7}),...(base.sub?{sub:Math.min(27,base.sub+8)}:{}),...(base.to?{ch:Math.min(90,base.ch+15)}:{})};
 }
 function mkFighter(def){const maxSta=Math.round(50+def.stats.GAS*.6);
-  return{name:def.name,sn:def.sn,stats:def.stats,traits:def.traits||{},pal:def.pal,hp:def.hp,maxHp:def.hp,sta:maxSta,maxSta,
+  return{name:def.name,sn:def.sn,stats:{...def.stats},traits:def.traits||{},pal:def.pal,hp:def.hp,maxHp:def.hp,sta:maxSta,maxSta,
     charge:0,spentSpecial:false,tilt:0,def:0,lock:0,grip:0,cd:{},pts:0,adv:0,chain:null,moves:U.filter(m=>!def.basics||def.basics.includes(m.id)).concat(...def.sets.map(s=>SIG[s]),specialFor(def))}}
 function newMatch(pDef,eDef,options={}){return{underground:!!options.underground,p:mkFighter(pDef),e:mkFighter(eDef),pos:'STANDING',top:null,turn:0,over:null,bag:{electro:2,tape:1,acai:1,...(pDef.bag||{})}}}
 const roleOf=(S,w)=>S.pos==='STANDING'?'neutral':(S.top===w?'top':'bottom');
@@ -690,7 +691,7 @@ function chance(S,w,m){const a=S[w],d=S[opp(w)],cb=chained(S,w,m)?(a.cbonus||CHA
 function snap(S){const f=x=>({sn:x.sn,charge:x.charge,hp:x.hp,maxHp:x.maxHp,sta:x.sta,maxSta:x.maxSta,tilt:x.tilt,def:x.def,lock:x.lock,grip:x.grip,pts:x.pts,adv:x.adv});
   return{p:f(S.p),e:f(S.e),pos:S.pos,top:S.top,turn:S.turn}}
 function setPos(S,w,to){const[pos,role]=to.split(':');S.pos=pos;S.top=pos==='STANDING'?null:(role==='top'?w:opp(w));if(pos!=='BACK'&&pos!=='ASHI'){S.p.lock=0;S.e.lock=0}}
-function hurt(S,w,amt,ev,tech){const t=opp(w),d=S[t];const dmg=Math.max(1,Math.round(amt*(d.def>0?.7:1)));const actual=Math.min(d.hp,dmg);d.hp=Math.max(0,d.hp-dmg);if(!S[w].spentSpecial)S[w].charge=Math.min(SPECIAL_CHARGE,S[w].charge+actual*2);ev.push({t:'dmg',who:t,amt:dmg});
+function hurt(S,w,amt,ev,tech){const t=opp(w),d=S[t];const dmg=Math.max(1,Math.round(amt*(d.def>0?.7:1)*(1-(d.resistance||0))));const actual=Math.min(d.hp,dmg);d.hp=Math.max(0,d.hp-dmg);if(!S[w].spentSpecial)S[w].charge=Math.min(SPECIAL_CHARGE,S[w].charge+actual*2);ev.push({t:'dmg',who:t,amt:dmg});
   if(d.hp<=0&&!S.over)S.over={winner:w,by:'exhaust',tech}}
 
 function resolve(S,w,m,rng=Math.random){if(S.over||!m||!avail(S,w).includes(m)||!usable(S,w,m))return[];const ev=[],a=S[w],d=S[opp(w)];
@@ -756,6 +757,16 @@ const BELT_ORDER=['blanco','azul','morado','marron','negro'];
 const nextBelt=b=>BELT_ORDER[BELT_ORDER.indexOf(b||'blanco')+1]||null;
 const beltNeed=b=>({azul:150,morado:400,marron:800,negro:1400})[b];
 const LP_DELTA=(o,foe)=>o.winner==='p'?(foe&&foe.lp||15):o.by==='tapout'?-8:o.by==='points'?-10:-15;
+
+const TRAINING=[
+ {id:'trained_pass',base:'half_pass',name:'Pase de precisión',medals:1,xp:60,cost:10,ch:72},
+ {id:'trained_escape',base:'shrimp',name:'Escape técnico',medals:2,xp:150,cost:8,ch:78},
+ {id:'trained_back',base:'rnc',name:'Mata león de precisión',medals:4,xp:350,cost:14,sub:19,dmg:17}
+];
+function trainingUnlocked(p,t){return new Set((p.progress?.medals||[]).filter(id=>['copa','flow','umbral','carnales','ibjjf','adcc','cji'].includes(id))).size>=t.medals&&(p.xp||0)>=t.xp}
+function beltCombat(b){const rank=Math.max(0,BELT_ORDER.indexOf(b||'blanco'));return{attack:rank*3,defense:rank*3}}
+function applyTraining(f,p){const bonus=beltCombat(p.belt);f.stats.SUB+=bonus.attack;f.stats.PRE+=bonus.attack;f.resistance=bonus.defense/100;
+ for(const t of TRAINING.filter(t=>trainingUnlocked(p,t))){const base=U.find(m=>m.id===t.base);if(base&&!f.moves.some(m=>m.id===t.id))f.moves.push({...base,id:t.id,n:t.name,sig:1,cost:t.cost,...(t.ch?{ch:t.ch}:{}),...(t.sub?{sub:t.sub,dmg:t.dmg}:{})})}}
 /*ENGINE-END*/
 
 /*GFX-START — pixel art procedural: sprites con contorno, retratos, 3 escenarios, fuente 3x5 */
@@ -1124,7 +1135,7 @@ async function turn(a){if(busy||S.over)return;busy=true;menu('wait');
   if(!S.over)await playEvents(upkeep(S));
   if(S.over)return endBattle();Snd.theme(musicFor());busy=false;menu('root');prompt_()}
 async function startBattle(def,foe,foeKey,bgOverride){if(circuit&&!canEnter(circuit.si)){circuit=null;openCircuit();return}battleHistory=[];$('#logPanel').hidden=true;Snd.wake();S=newMatch(def,foe,{underground:!!(circuit&&CIRCUIT[circuit.si].id==='carnales'&&foeKey==='black_johnny')});FOE=foe;FOEKEY=foeKey;PP=def.pal;EP=foe.pal;BG=bgOverride||foe.bg||'dojo';
-  const pk=perks();S.p.maxHp+=pk.hp;S.p.hp=S.p.maxHp;S.p.cbonus=pk.cb;for(const k in pk.bag)S.bag[k]+=pk.bag[k];
+  const pk=perks();S.p.maxHp+=pk.hp;S.p.hp=S.p.maxHp;S.p.cbonus=pk.cb;applyTraining(S.p,account.profile);for(const k in pk.bag)S.bag[k]+=pk.bag[k];
   if(circuit&&circuit.carry){S.p.hp=Math.max(30,Math.min(S.p.maxHp,circuit.carry.hp+35));S.bag=circuit.carry.bag}
   view=snap(S);busy=true;show('s-battle');fitCanvas(cv);hud();menu('wait');$('#dlgText').textContent='';$('#auto').classList.add('show');
   Snd.theme(foe.theme||'battle');const first=!store.get('bjjm_trial',false);
@@ -1209,10 +1220,11 @@ const CIRCUIT=[
  {id:'carnales',name:'DOS CARNALES DOJO',bg:'carnales',requires:['copa','flow','umbral'],bonus:120,fights:['chanops','vagabundo','johnny','black_johnny'],desc:'Vence a Johnny C. Cobra 40 créditos o reta a Black Johnny por la medalla y 120 créditos.'},
  {id:'ibjjf',name:'IBJJF WORLDS',bg:'ibjjf',requires:['copa','flow','umbral','carnales'],bonus:70,fights:['keiji','luana','tonelada'],desc:'Reúne las cuatro medallas de dojo. Tres rondas de campeonato.'},
  {id:'adcc',name:'ADCC TRIALS',bg:'adcc',requires:['ibjjf'],bonus:90,fights:['kolya','mika','chelo'],desc:'Después del Worlds: tres combates sin kimono.'},
- {id:'cji',name:'CJI INVITATIONAL',bg:'cji',requires:['copa','flow','umbral','carnales','ibjjf','adcc'],bonus:160,fights:['tito','bazza','ryker'],desc:'Cumbre del circuito. Exige las otras seis medallas. Reglas RPG: puntos y sumisión.'}];
+ {id:'cji',name:'CJI INVITATIONAL',bg:'cji',requires:['copa','flow','umbral','carnales','ibjjf','adcc'],bonus:160,fights:['tito','bazza','ryker'],desc:'Cumbre del circuito. Exige seis medallas y cinta café; negra recomendada. Reglas RPG: puntos y sumisión.'}];
 let circuit=null;
 const missingMedals=i=>{const t=CIRCUIT[i];return t?CIRCUIT.slice(0,i).map(x=>x.id).filter(id=>!progress().medals.includes(id)):['invalid']};
-const canEnter=i=>!!CIRCUIT[i]&&missingMedals(i).length===0;
+const canEnter=i=>!!CIRCUIT[i]&&missingMedals(i).length===0&&(CIRCUIT[i].id!=='cji'||['marron','negro'].includes(account.profile.belt));
+const entryHint=i=>missingMedals(i).map(id=>CIRCUIT.find(t=>t.id===id)?.name||'Sede anterior').concat(CIRCUIT[i]?.id==='cji'&&!['marron','negro'].includes(account.profile.belt)?['CINTA CAFÉ: 800 LP y exámenes en Horizonte. Entrena en el garaje; negra recomendada.']:[]).join(' · ');
 const unlockedFighters=()=>{const pr=progress(),n=pr.medals.length;return [...PLAYABLE.filter((k,i)=>k==='don_moi'||i<3+n*2),'chanops',...(pr.johnnyDefeated?['vagabundo','johnny']:[]),...(pr.medals.includes('carnales')?['black_johnny']:[])]};
 const progress=()=>{const p=account.profile;if(!p.progress||typeof p.progress!=='object')p.progress={stage:0,medals:[]};if(!Array.isArray(p.progress.medals))p.progress.medals=[];p.progress.medals=[...new Set(p.progress.medals.filter(id=>CIRCUIT.some(t=>t.id===id)))];p.progress.stage=CIRCUIT.findIndex(t=>!p.progress.medals.includes(t.id));if(p.progress.stage<0)p.progress.stage=CIRCUIT.length;return p.progress};
 let saveError='';
@@ -1228,7 +1240,7 @@ function openCircuit(){show('s-circuit');$('#s-circuit h2').textContent='CIRCUIT
 function openAtlas(){show('s-circuit');$('#s-circuit h2').textContent='MAPA Y DESTINOS';$('#s-circuit p').textContent='Ruta: Horizonte → Flow → Umbral → Dos Carnales → Worlds → ADCC → CJI. Gana cada medalla para avanzar.';const box=$('#circuitList');box.innerHTML='';const overview=document.createElement('canvas');overview.width=160;overview.height=196;overview.setAttribute('aria-label','Plano del circuito: CJI al norte, ADCC debajo, Worlds al centro y dojos al sur');overview.style.cssText='width:100%;max-height:320px;object-fit:contain;background:#182b31;border:2px solid #65865b';box.appendChild(overview);drawOverview(overview.getContext('2d'));
   VENUES.forEach(v=>{const open_=v.stage===null||canEnter(v.stage),b=document.createElement('button');b.className='btn '+(v.id==='shop'?'gold':'dark');b.disabled=!open_;
     const missing=v.stage===null?[]:missingMedals(v.stage).map(id=>CIRCUIT.find(t=>t.id===id));
-    b.innerHTML='<b>'+esc(v.name)+'</b><br><small>'+(open_?(v.id==='shop'?'SURESTE · KIMONOS, LOOKS Y MEJORAS':v.rivals?'RIVALES PROPIOS · ENTRENAR': 'TORNEO DESBLOQUEADO'):'FALTA: '+missing.map(t=>t.name).join(', '))+'</small>';
+    b.innerHTML='<b>'+esc(v.name)+'</b><br><small>'+(open_?(v.id==='shop'?'SURESTE · KIMONOS, LOOKS Y MEJORAS':v.rivals?'RIVALES PROPIOS · ENTRENAR': 'TORNEO DESBLOQUEADO'):'FALTA: '+entryHint(v.stage))+'</small>';
     b.onclick=()=>{if(!MAPT)MAPT=buildMap();me.x=v.dx;me.y=v.dy+1;me.px=me.x*TS;me.py=me.y*TS;me.moving=false;held=null;enterVenue(v)};box.appendChild(b)})}
 $('#cBack').onclick=()=>{circuit=null;openHub()};
 
@@ -1251,7 +1263,7 @@ const NPCS=[
  {x:22,y:40,pal:'vagabundo',lines:['Dos Carnales está al este. Johnny C te espera después de mí.','Cuando le ganes podrás cobrar 40 créditos o retar a Black Johnny por la medalla.']},
  {x:18,y:29,pal:'luana',lines:['El Worlds requiere cuatro medallas: Horizonte, Flow, Umbral y Dos Carnales.','Camina hacia el norte: después viene ADCC.']},
  {x:22,y:18,pal:'kolya',lines:['ADCC es el penúltimo escalón.','La última sede está todavía más al norte.']},
- {x:18,y:8,pal:'bazza',lines:['CJI: la cumbre. Aquí necesitas todas las otras seis medallas.','Un cinturón no abre esa puerta. Tu recorrido sí.']}];
+ {x:18,y:8,pal:'bazza',lines:['CJI: la cumbre. Aquí necesitas todas las otras seis medallas.','También necesitas cinta café como mínimo. Negra recomendada para derrotar al rey Rayan. Sube LP entrenando y haz tus exámenes en Horizonte.']}];
 let MAPT=null;
 function buildMap(){const rnd=(a=>()=>(a=(a*16807)%2147483647)/2147483647)(42),g=[];
   for(let y=0;y<MH;y++){g.push([]);for(let x=0;x<MW;x++)g[y].push(x===0||y===0||x===MW-1||y===MH-1?'T':'.')}
@@ -1320,7 +1332,7 @@ addEventListener('keyup',e=>{if(KEYS[e.key]===held)held=null});
 /* ---- sedes ---- */
 function leaveVenue(v){me.y=v.dy+1;me.x=v.dx;me.px=me.x*TS;me.py=me.y*TS;me.dir='down';openMap()}
 function enterVenue(v){if(v.id==='shop'){openShop(v);return}const pr=progress(),T=v.stage!==null?CIRCUIT[v.stage]:null;
-  if(T&&!canEnter(v.stage)){const need=CIRCUIT.find(t=>t.id===missingMedals(v.stage)[0]);me.y++;me.py=me.y*TS;me.dir='down';mapSay([`${v.name} está cerrado para ti.`,`Primero gana ${need.name}.`]);return}
+  if(T&&!canEnter(v.stage)){const need=entryHint(v.stage);me.y++;me.py=me.y*TS;me.dir='down';mapSay([`${v.name} está cerrado para ti.`,`Necesitas: ${need}`]);return}
   show('s-venue');Snd.ok();$('#vTitle').textContent=v.name;const bg=T?T.bg:v.id==='garage'?'garage':'dojo',vc=$('#vCv');
   drawScene(vc.getContext('2d'),{pos:'STANDING',p:{},e:{}},mapPal(),ROSTER[T?T.fights[T.fights.length-1]:'spaz'].pal,0,{},{bg});
   const box=$('#vBtns');box.innerHTML='';const add=(t,cls,fn,dis)=>{const b=document.createElement('button');b.className='btn '+cls;b.innerHTML=t;b.disabled=!!dis;b.onclick=fn;box.appendChild(b)};
@@ -1409,6 +1421,7 @@ async function examPass(){const E=EX,p=account.profile;[...$('#pads').children].
 /* ---- Hub, Builder, Ranking ---- */
 const BELTS=[['blanco','#f4f4e4'],['azul','#3b7dd8'],['morado','#8a4fc2'],['marron','#7a4a24'],['negro','#14151f']];
 function openHub(){show('s-hub');loadLegends();Snd.theme('title');const p=account.profile;$('#hubName').textContent=UP(p.username||'');
+  const bonus=beltCombat(p.belt);$('#trainingProgress').innerHTML='<b>TU ENTRENAMIENTO</b><br>+'+bonus.attack+' ataque (SUM/PRE) · '+bonus.defense+'% reducción de daño · '+(p.xp||0)+' XP<br>'+TRAINING.map(t=>(trainingUnlocked(p,t)?'✓ ':'🔒 ')+t.name+' · '+t.medals+' medallas + '+t.xp+' XP').join('<br>')+'<br><small>Las técnicas se añaden automáticamente a todos tus luchadores y aparecen en su posición correspondiente. Las cintas se obtienen con LP y examen en Horizonte.</small>';
   const pk0=perks(),nb0=nextBelt(p.belt);$('#hubMeta').textContent=`CINTA ${UP(p.belt||'blanco')} · NIVEL ${p.level||1} · ${p.lp||0} LP · ${p.wins||0}V ${p.losses||0}D · +${pk0.hp} HP`+(nb0?` · EXAMEN ${UP(nb0)}: ${beltNeed(nb0)} LP`:'');
   $('#hubMode').textContent=account.mode==='live'?(saveError||'PROGRESO GUARDADO EN LA NUBE'):'PARTIDA LOCAL · CREA UNA CUENTA PARA GUARDAR EN LA NUBE';
   $('#hubSignup').hidden=account.mode==='live';$('#btnLogout').textContent=account.mode==='live'?'CERRAR SESION':'VOLVER AL INICIO';

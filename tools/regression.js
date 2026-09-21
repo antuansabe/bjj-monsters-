@@ -17,7 +17,7 @@ S=E.newMatch(E.ROSTER.kolya,E.ROSTER.spaz);E.resolve(S,'p',E.SIG.wrestle.find(m=
 S.bag.acai=0;before=JSON.stringify(S);E.useItem(S,'acai');assert.equal(JSON.stringify(S),before,'No se consume inventario vacío');
 S.over={winner:'p'};before=JSON.stringify(S);E.resolve(S,'p',E.U.find(m=>m.id==='breathe'));assert.equal(JSON.stringify(S),before,'Combate terminado no cambia');
 // El bloque incluye PLAYABLE como dependencia explícita, sin DOM.
-const profile={progress:{stage:99,medals:[]}};
+const profile={belt:'marron',progress:{stage:99,medals:[]}};
 const prog=new Function('account','PLAYABLE',between('const CIRCUIT=','async function saveProgress')+';return{CIRCUIT,canEnter,unlockedFighters,progress};')({profile},Object.keys(E.ROSTER).filter(k=>!['spaz','ryker'].includes(k)));
 assert.deepEqual(prog.CIRCUIT.map(t=>t.id),['copa','flow','umbral','carnales','ibjjf','adcc','cji']);
 for(const t of prog.CIRCUIT){assert.ok(t.fights.length>0);for(const id of t.fights)assert.ok(E.ROSTER[id],id+' existe');}
@@ -79,3 +79,7 @@ for(let i=0;i<prog.CIRCUIT.length;i++){
 }
 profile.progress.medals=['adcc'];assert.equal(prog.canEnter(6),false);
 console.log('OK: todas las transiciones entre dojos y bloqueo de saltos.');
+
+profile.progress.medals=required;for(const belt of ['blanco','azul','morado']){profile.belt=belt;assert.equal(prog.canEnter(6),false)}
+for(const belt of ['marron','negro']){profile.belt=belt;assert.equal(prog.canEnter(6),true)}
+console.log('OK: CJI exige café o negra, además de las seis medallas.');
