@@ -10,3 +10,7 @@ const E=new Function(h.slice(h.indexOf('/*ENGINE-START'),h.indexOf('/*ENGINE-END
 assert.equal(E.ROSTER.bad_rocha.name,'BAD ROCHA');assert.equal(E.ROSTER.bad_rocha.q.intro,'el Diablooo');assert.equal(E.ROSTER.bad_rocha.pal.style,'bald');assert.ok(E.ROSTER.bad_rocha.sets.includes('legs'));
 for(let i=0;i<100;i++){const s=E.newMatch(E.ROSTER.don_moi,E.ROSTER.bad_rocha);let turns=0;while(!s.over&&turns++<100){E.resolve(s,'p',E.aiPick(s,'p'));if(!s.over)E.resolve(s,'e',E.aiPick(s,'e'));if(!s.over)E.upkeep(s)}assert.ok(s.over,'El combate termina')}
 console.log('OK: Bad Rocha, persecución sin atravesar obstáculos, pausa, cooldown, ruta imposible y 100 combates completos.');
+const moveState={x:20,y:60,moving:false},moveSource=h.slice(h.indexOf('function moveMap(dir)'),h.indexOf('function tickRocha()',h.indexOf('function moveMap(dir)')));
+const move=new Function('me','mapBusy','DIRS','solid',moveSource+';return moveMap;')(moveState,false,{down:[0,1]},()=>false);
+move('down');assert.equal(moveState.y,61);assert.equal(moveState.moving,true,'Pulsación breve inicia movimiento inmediatamente');move('down');assert.equal(moveState.y,61,'No apila pasos mientras anima');
+console.log('OK: pulsación breve responde sin apilar movimientos.');

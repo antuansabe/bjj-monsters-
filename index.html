@@ -1241,7 +1241,7 @@ function openCircuit(){show('s-circuit');$('#s-circuit h2').textContent='CIRCUIT
     box.appendChild(b);drawFace(b.querySelector('canvas').getContext('2d'),ROSTER[t.fights[t.fights.length-1]].pal,done?'#4a5a3a':'#9a2a20');
     b.onclick=()=>{if(!canEnter(i))return;circuit={si:i,idx:0};sel={step:'me',me:null,meKey:null,foeKey:null,cur:null,circuit:1};renderSelect()}})}
 function openAtlas(){show('s-circuit');$('#s-circuit h2').textContent='MAPA Y DESTINOS';$('#s-circuit p').textContent='Ruta: Horizonte → Flow → Umbral → Dos Carnales → Worlds → ADCC → CJI. Gana cada medalla para avanzar.';const box=$('#circuitList');box.innerHTML='';const overview=document.createElement('canvas');overview.width=160;overview.height=196;overview.setAttribute('aria-label','Plano del circuito: CJI al norte, ADCC debajo, Worlds al centro y dojos al sur');overview.style.cssText='width:100%;max-height:320px;object-fit:contain;background:#182b31;border:2px solid #65865b';box.appendChild(overview);drawOverview(overview.getContext('2d'));
-  VENUES.forEach(v=>{const open_=v.stage===null||canEnter(v.stage),b=document.createElement('button');b.className='btn '+(v.id==='shop'?'gold':'dark');b.disabled=!open_;
+  [...VENUES].sort((a,b)=>(a.stage??99)-(b.stage??99)).forEach(v=>{const open_=v.stage===null||canEnter(v.stage),b=document.createElement('button');b.className='btn '+(v.id==='shop'?'gold':'dark');b.disabled=!open_;
     const missing=v.stage===null?[]:missingMedals(v.stage).map(id=>CIRCUIT.find(t=>t.id===id));
     b.innerHTML='<b>'+esc(v.name)+'</b><br><small>'+(open_?(v.id==='shop'?'SURESTE · KIMONOS, LOOKS Y MEJORAS':v.rivals?'RIVALES PROPIOS · ENTRENAR': 'TORNEO DESBLOQUEADO'):'FALTA: '+entryHint(v.stage))+'</small>';
     b.onclick=()=>{if(!MAPT)MAPT=buildMap();me.x=v.dx;me.y=v.dy+1;me.px=me.x*TS;me.py=me.y*TS;me.moving=false;held=null;enterVenue(v)};box.appendChild(b)})}
@@ -1324,7 +1324,8 @@ function drawMap(c,fr){const VW=160,VH=c.canvas.height;c.imageSmoothingEnabled=f
   actors.sort((a,b)=>a.y-b.y).forEach(a=>a.f());c.restore()}
 function mapTick(){tickRocha();if(!$('#s-map').classList.contains('on'))return;if(me.moving){const[dx,dy]=DIRS[me.dir];me.px+=dx*1.34;me.py+=dy*1.34;me.step++;
     if(Math.abs(me.px-me.x*TS)<1.4&&Math.abs(me.py-me.y*TS)<1.4){me.px=me.x*TS;me.py=me.y*TS;me.moving=false;arrive()}}
-  if(!me.moving&&held&&!mapBusy){me.dir=held;const[dx,dy]=DIRS[held],nx=me.x+dx,ny=me.y+dy;if(!solid(nx,ny)){me.x=nx;me.y=ny;me.moving=true}}}
+  if(held)moveMap(held)}
+function moveMap(dir){if(me.moving||mapBusy||!DIRS[dir])return;me.dir=dir;const[dx,dy]=DIRS[dir],nx=me.x+dx,ny=me.y+dy;if(!solid(nx,ny)){me.x=nx;me.y=ny;me.moving=true}}
 function tickRocha(){const now=Date.now(),action=rochaAction(rocha,me,now,mapBusy||me.moving);if(action==='challenge'){openRochaChallenge();return}if(action==='chase'){const step=chaseStep(MAPT,rocha,me,(x,y)=>NPCS.some(n=>n.x===x&&n.y===y));if(step)Object.assign(rocha,step);rocha.nextStep=now+450}}
 function openRochaChallenge(){held=null;mapBusy=false;rocha.cooldown=Date.now()+45000;show('s-venue');Snd.ok();$('#vTitle').textContent='BAD ROCHA';$('#vDesc').textContent='«el Diablooo» — Especialista en leg locks. ¿Aceptas el reto? Puedes seguir explorando sin perder progreso.';
  const v={id:'bad_rocha',name:'BAD ROCHA',stage:null,dx:me.x,dy:me.y-1,rivals:['bad_rocha']};
@@ -1337,12 +1338,12 @@ function interact(){if(mapBusy||me.moving)return;const[dx,dy]=DIRS[me.dir],n=NPC
 function openMap(fresh){circuit=null;if(!MAPT)MAPT=buildMap();show('s-map');Snd.theme('title');held=null;mapBusy=false;fitCanvas($('#mapCv'));
   const p=account.profile,pr=progress();$('#mhBelt').textContent='CINTA '+UP(p.belt||'blanco');$('#mhLp').textContent=(p.lp||0)+' LP';$('#mhMed').textContent=pr.medals.length+'/'+CIRCUIT.length+' MEDALLAS';
   if(fresh&&!store.get('bjjm_maptip',false)){store.set('bjjm_maptip',true);mapSay(['Este es el circuito. Empiezas al sur. Sube por la avenida: dojos, Worlds, ADCC y CJI.','Con A hablas y avanzas el diálogo. Empieza por Academia Horizonte, al noreste. En MENÚ > MAPA Y DESTINOS puedes viajar a Puras Broncas Store y a los otros dojos.'])}}
-document.querySelectorAll('.dpad button').forEach(b=>{const d=b.dataset.d,on=e=>{e.preventDefault();Snd.wake();held=d;b.classList.add('held')},off=()=>{if(held===d)held=null;b.classList.remove('held')};
+document.querySelectorAll('.dpad button').forEach(b=>{const d=b.dataset.d,on=e=>{e.preventDefault();Snd.wake();held=d;moveMap(d);b.classList.add('held')},off=()=>{if(held===d)held=null;b.classList.remove('held')};
   b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off))});
 addEventListener('blur',()=>{held=null});
 $('#btnA').onclick=()=>mapBusy?tapNow():interact();$('#mapHub').onclick=()=>openHub();
 const KEYS={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right'};
-addEventListener('keydown',e=>{if(!$('#s-map').classList.contains('on'))return;if(KEYS[e.key]){held=KEYS[e.key];e.preventDefault()}else if(e.key===' '||e.key==='Enter'){mapBusy?tapNow():interact();e.preventDefault()}});
+addEventListener('keydown',e=>{if(!$('#s-map').classList.contains('on'))return;if(KEYS[e.key]){held=KEYS[e.key];moveMap(held);e.preventDefault()}else if(e.key===' '||e.key==='Enter'){mapBusy?tapNow():interact();e.preventDefault()}});
 addEventListener('keyup',e=>{if(KEYS[e.key]===held)held=null});
 
 /* ---- sedes ---- */
